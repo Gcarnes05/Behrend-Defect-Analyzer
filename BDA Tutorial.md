@@ -4,7 +4,7 @@ This page explains how to use the `BDA` code.
 
 To follow this tutorial, it is important that defect calculations have already been performed using pydefect or another method. Once these calculations are complete, charged defect formation energy analysis can begin.
 
-The BDA is a tool used to calculate formation energies using the quantum simulation package known as [VASP](https://www.vasp.at/) [1]. It also uses [`sxdefectalign`](https://sxrepo.mpie.de/attachments/download/73/sxdefectalign-manual.pdf) to compute correction schemes [2]. As an end goal, the tool can plot formation energy as a function of fermi energy.  These plots help identify the stability of defects, defect charge, the effects of doping (i.e., changes in fermi energy), and transition levels. The BDA helps to automate this process, making it more accessible to new users. 
+The BDA is a tool used to calculate formation energies using the quantum simulation package known as [VASP](https://www.vasp.at/) [1]. It also uses [`sxdefectalign`](https://sxrepo.mpie.de/attachments/download/73/sxdefectalign-manual.pdf) to compute correction schemes [2]. As an end goal, the tool can plot formation energy as a function of fermi energy.  These plots help identify the stability of defects, defect charge, and the effects of doping (i.e., changes in fermi energy). The BDA helps to automate this process, making it more accessible to new users. 
 
 The BDA assumes the following directory structure:
 - The placeholder `<project_name>` typically represents the name of the target material, optionally including its crystal structure.
