@@ -218,4 +218,3 @@ stop
 [5] Christoph Freysoldt. Manual for sxdefectalign, version 3.0. Technical report, *MPI Fritz Haber Institute*, August 2022.  
 [6] John L. Lyons and Chris G. Van de Walle. Computationally predicted energies and properties of defects in GaN. *npj Computational Materials*, 3:12, 2017.  
 [7] Nubhav Jain, Shyue Ping Ong, Geoffroy Hautier, Wei Chen, William Davidson Richards, Stephen Dacek, Shreyas Cholia, Dan Gunter, David Skinner, Gerbrand Ceder, and Kristin A. Persson. The Materials Project: A materials genome approach to accelerating materials innovation. *APL Materials*, 1(1):011002, 2013.
-
