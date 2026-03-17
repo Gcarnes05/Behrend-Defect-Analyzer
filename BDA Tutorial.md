@@ -4,7 +4,7 @@ This page explains how to use the `BDA` code.
 
 To follow this tutorial, defect calculations should already have been performed using [PyDefect](https://github.com/kumagai-group/pydefect) or another method [1]. This workflow also builds on scripts developed by [Zachery Willard](https://github.com/zacherywillard) [2] and [Evan Payne](https://github.com/EvanPayne22) [3], which handle defect energy extraction and formatting for BDA. If further information on formatting is required, refer to their repositories. Once these calculations are complete, charged defect formation energy analysis can begin.
 
-The BDA is a tool used to calculate formation energies using the quantum simulation package known as [VASP](https://www.vasp.at/) [4]. It also uses [`sxdefectalign`](https://sxrepo.mpie.de/attachments/download/73/sxdefectalign-manual.pdf) to compute correction terms for charged defects [5], including finite-size and long-range potential energy corrections. The tool can then plot formation energy as a function of fermi energy.  These plots help identify the stability of defects, defect charge, and the effects of doping (i.e., changes in fermi energy). The BDA helps to automate this process, making it more accessible to new users. 
+The BDA is a tool used to calculate formation energies using the quantum simulation package known as [VASP](https://www.vasp.at/) [4]. It also uses [`sxdefectalign`](https://sxrepo.mpie.de/attachments/download/73/sxdefectalign-manual.pdf) to compute correction terms for charged defects [5], including finite-size and long-range potential energy corrections. The tool can then plot formation energy as a function of fermi energy.  These plots help identify the stability of defects, defect charge, and the effects of doping (i.e., changes in fermi energy). The BDA helps to automate this process. 
 
 
 The formation energy of a defect is calculated as:
@@ -54,7 +54,7 @@ The BDA assumes the following directory structure:
 ```
 We recommend that users follow the same directory structure if possible. The defect directories must also follow the naming convention shown. 
 
-The BDA also assumes the following formatting for POSCARS. The header must include the defect center; the rest of the formatting can follow general set ups like [Materials Project](https://next-gen.materialsproject.org/materials) [7].
+The BDA also assumes the following formatting for POSCAR files. The header must include the defect center. ie three real values representing the x,y,z coordinates of the defect in lattice units; the rest of the POSCAR should have the standard format see for exampl: [Materials Project](https://next-gen.materialsproject.org/materials) [7] and below:
 
     ```
     0.083333 0.166666 0.499553 #defect center
@@ -70,13 +70,11 @@ The BDA also assumes the following formatting for POSCARS. The header must inclu
     ```
    - Note: when using PyDefect, the defect center does not appear in the first line of the POSCAR file. To locate it, refer to the defect_entry.json file, where it is specified as \"defect_center\".
 
-
 The details of the workflow are explained step by step, using an example of GaN calculated with the PBE and HSE functional.
-
 
 # Step 1. Energy Corrections ($E_{corr}$, $\Delta V$)
 
-In charged-defect VASP calculations, the defect artificially interacts with its periodic images due to the finite size of the simulation. A correction is required to gain the isolated defect formation energy. Christopher Freysoldt created a program to compute this correction ($E_{corr}$). It also generates data to determine the shift in the long-range electrostatic potentials ($\Delta V$) assumed to follow a Gaussian distribution. The `run_sxdefectalign_code` script uses Freysoldt's program called `sxdefectalign`, which must first be installed. 
+In charged-defect VASP calculations, the defect artificially interacts with its periodic images due to the finite size of the simulation. A correction is required to gain the isolated defect formation energy. Christopher Freysoldt created a program to compute this correction ($E_{corr}$). It also generates data to determine the shift in the long-range electrostatic potential ($\Delta V$). The `run_sxdefectalign_code` script uses Freysoldt's program called `sxdefectalign`, which must first be installed. 
 
 **Download and setup**
 Download at https://sxrepo.mpie.de/projects/sphinx-add-ons/files, then download sxdefectalign.bz2 and install with the following:
@@ -85,7 +83,7 @@ bunzip2 sxdefectalign.bz2
 chmod +x sxdefectalign
 mv sxdefectalign ~/work/bin/
 ```
-The sxdefectalign program is expected to be located in a directory named bin inside of your work directory. If the bin folder does not exist, create it and move the Freysoldt `sxdefectalign` inside. The path is hard coded in the `run_sxdefectalign_code` script and must be updated if Freysoldt's `sxdefectalign` is installed elsewhere. The `make_vAtoms_output` script is also required. It automatically searches all subdirectories in the working directory, reads the `vAtoms.dat` files created by `run_sxdefectalign_code`, formats them as comma-seperated values, and then stores them in a file named `vAtoms_output.csv`. 
+The sxdefectalign program is expected to be located in a directory named bin inside of your work directory. If the bin folder does not exist, create it and move the Freysoldt `sxdefectalign` inside. The path is hard coded in the `run_sxdefectalign_code` script and must be updated if Freysoldt's `sxdefectalign` is installed elsewhere. The `make_vAtoms_output` script is also required. It automatically searches all subdirectories in the working directory, reads the `vAtoms.dat` files created by `run_sxdefectalign_code`, formats the vAtom data as comma-seperated values, and then stores them in a file named `vAtoms_output.csv`. 
 
 
 **Configuring the Scripts**
