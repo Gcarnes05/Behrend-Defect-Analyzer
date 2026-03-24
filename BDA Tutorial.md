@@ -204,6 +204,48 @@ stop,Va_Ga_-1/
 ...  
 stop
 ```
+## Energies Final
+
+Once `energies_correction.csv` and `vAtoms_output.csv` are ready, use `energies_final.py` to combine these files with the reservoir energies and compute the potential alignment corrections (ΔV) for each defect. This script also calculates the standard deviation of ΔV based on the chosen set of atoms.  
+  
+### Script Arguments  
+  
+- `-poscar`: Path to the POSCAR file (default: `./POSCAR`)  
+- `-vatoms`: Path to `vAtoms_output.csv` (default: `./vAtoms_output.csv`)  
+- `-correction`: Path to `energies_correction.csv` (default: `./energies_correction.csv`)  
+- `-percent`: Fraction of the furthest atoms used to compute ΔV (default: 0.8)  
+- `-number`: Number of furthest atoms used for ΔV (default: -1; ignored if `-percent` is set)  
+- `resen`: Per-atom bulk energies for each element in POSCAR order
+  
+**Note:** You can use either `-percent` or `-number` to select atoms for ΔV calculation. If both are provided, `-number` takes precedence.  
+  
+### Example Usage  
+We recommend that users create a bash script to run the `energies_final.py` program. We will call it `run_energies_final.sh`. This makes keeping track of arguments easier. Here is an example:
+```
+#run energies_final.py	 Energy_per_atom Ga,N
+python energies_final.py -2.91250895 -8.31707533 -percent 0.85 -poscar ./POSCAR -vatoms ./vAtoms_output.csv -correction ./energies_correction.csv
+```
+Take notice that the bulk energies per atom must come first, then any additional arguments. 
+### Example Output
+
+`energies_final.py` produces `energies_final.csv` with the following format:
+```
+Defect Name,Charge,Bulk Energy,Correction Energy,delta V,Std Deviation  
+bulk,0.0,-779.26382452,0.0,0.0,0.0  
+Va_Ga,0.0,-769.12439871,0.0,-0.1134629125,0.008629802275897968  
+Va_Ga,-1.0,-766.05547513,0.1844,-0.10367685625,0.014714400975998342  
+Va_Ga,1.0,-771.5878355,0.1844,-0.182173,0.012320662477115425  
+Va_Ga,-2.0,-762.69860429,0.737601,-0.09537269999999999,0.02371790751483992  
+Va_Ga,-3.0,-759.18076603,1.6596,-0.08617888124999998,0.03630872044557992
+```
+**Manual Creation**
+This file can be created manually if these calculations have been done using another tool. If using PyDefect, the information can be found in the following files:
+- **Defect Name**: Name of the defect directory (e.g., `Va_Ga_0/`).  
+- **Charge**: Encoded in the defect directory name (e.g., `Va_Ga_-1/` → `-1`).  
+- **Bulk Energy**: Extract from `OUTCAR` of the bulk calculation.  
+- **Correction Energy ($E_\text{corr}$)**: Found in `defect_energy_info.yaml`.  
+- **Potential Alignment (ΔV)**: Also from `defect_energy_info.yaml` (reported as alignment energy). Compute ΔV using:  $\Delta V =  \frac{E_\text{align}}{q}$ where $q$ is the defect charge.  
+- **Standard Deviation of ΔV**: Not provided in PyDefect; can set to `0` if unknown.
 
 # Step 2. Plotting
 
