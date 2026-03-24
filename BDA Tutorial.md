@@ -25,7 +25,7 @@ Where:
 - $\Delta V$ is the potential alignment correction calculated by `sxdefectalign`  
 - $E_\text{corr}$ is the finite-size and electrostatic correction obtained from `sxdefectalign`
 
-This workflow assumes users know all values except the energy correction terms. For more details on formation energies and correction schemes in GaN, see Lyons and Van de Walle [6].
+For more details on formation energies and correction schemes in GaN, see Lyons and Van de Walle [6].
 
 The BDA assumes the following directory structure:
 - The placeholder `<project_name>` typically represents the name of the target material.
