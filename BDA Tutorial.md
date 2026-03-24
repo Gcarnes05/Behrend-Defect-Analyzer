@@ -42,6 +42,7 @@ The BDA assumes the following directory structure:
      └ defects/ ── 
                 ├─ run_complete.sh
                 ├─ complete_def_en_ef_min.py
+				├─ energies_final.py
                 ├─ no_vatoms.py
                 ├─ make_vAtoms_output.sh
                 ├─ run_sxdefectalign_code.sh
