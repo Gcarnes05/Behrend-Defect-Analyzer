@@ -209,7 +209,7 @@ stop
 
 Once `energies_correction.csv` and `vAtoms_output.csv` are ready, use `energies_final.py` to combine these files with the reservoir energies and compute the potential alignment corrections (ΔV) for each defect. This script also calculates the standard deviation of ΔV based on the chosen set of atoms.  
   
-### Script Arguments  
+### Program Arguments  
   
 - `-poscar`: Path to the POSCAR file (default: `./POSCAR`)  
 - `-vatoms`: Path to `vAtoms_output.csv` (default: `./vAtoms_output.csv`)  
@@ -226,8 +226,6 @@ We recommend that users create a bash script to run the `energies_final.py` prog
 #run energies_final.py	 Energy_per_atom Ga,N
 python energies_final.py -2.91250895 -8.31707533 -percent 0.85 -poscar ./POSCAR -vatoms ./vAtoms_output.csv -correction ./energies_correction.csv
 ```
-Take notice that the bulk energies per atom must come first, then any additional arguments. 
-### Example Output
 
 `energies_final.py` produces `energies_final.csv` with the following format:
 ```
