@@ -25,7 +25,7 @@ Where:
 - $\Delta V$ is the potential alignment correction calculated by `sxdefectalign`  
 - $E_\text{corr}$ is the finite-size and electrostatic correction obtained from `sxdefectalign`
 
-For more details on formation energies and correction schemes in GaN, see Lyons and Van de Walle [6].
+This workflow assumes users know all values except the energy correction terms. For more details on formation energies and correction schemes in GaN, see Lyons and Van de Walle [6].
 
 The BDA assumes the following directory structure:
 - The placeholder `<project_name>` typically represents the name of the target material.
@@ -42,7 +42,7 @@ The BDA assumes the following directory structure:
      └ defects/ ── 
                 ├─ run_complete.sh
                 ├─ complete_def_en_ef_min.py
-				├─ energies_final.py
+                ├─ energies_final.py
                 ├─ no_vatoms.py
                 ├─ make_vAtoms_output.sh
                 ├─ run_sxdefectalign_code.sh
@@ -70,7 +70,7 @@ The BDA also assumes the following formatting for POSCAR files. The header must 
        ...
     ```
    - Note: when using PyDefect, the defect center does not appear in the first line of the POSCAR file. To locate it, refer to the defect_entry.json file, where it is specified as \"defect_center\".
-
+   
 The details of the workflow are explained step by step, using an example of GaN calculated with the PBE and HSE functional.
 
 # Step 1. Energy Corrections ($E_{corr}$, $\Delta V$)
@@ -205,29 +205,34 @@ stop,Va_Ga_-1/
 ...  
 stop
 ```
-## Energies Final
+## Energies Final and $\Delta V$ Plots
 
-Once `energies_correction.csv` and `vAtoms_output.csv` are ready, use `energies_final.py` to combine these files with the reservoir energies and compute the potential alignment corrections (ΔV) for each defect. This script also calculates the standard deviation of ΔV based on the chosen set of atoms.  
+Once `energies_correction.csv` and `vAtoms_output.csv` are ready, use `energies_final_and_vAtomsImages.py` to combine these files the final energies and compute the potential alignment corrections (ΔV) for each defect. This script then calculates the standard deviation of ΔV based on the chosen set of atoms. Finally, it will plot $\Delta V$ vs radius for each defect. 
   
 ### Program Arguments  
-  
 - `-poscar`: Path to the POSCAR file (default: `./POSCAR`)  
 - `-vatoms`: Path to `vAtoms_output.csv` (default: `./vAtoms_output.csv`)  
 - `-correction`: Path to `energies_correction.csv` (default: `./energies_correction.csv`)  
 - `-percent`: Fraction of the furthest atoms used to compute ΔV (default: 0.8)  
-- `-number`: Number of furthest atoms used for ΔV (default: -1; ignored if `-percent` is set)  
-- `resen`: Per-atom bulk energies for each element in POSCAR order
+- `-number`: Number of furthest atoms used for ΔV (default: -1)
+- `-mu`: Per-atom bulk energies for each element in POSCAR order
+- `-plotvatoms`: Boolean flag to generate vAtoms plots for all defects (default: `True`).  
+- `-vatomsxmin`: Minimum x-axis for vAtoms plots (default: -100, auto-scaled).  
+- `-vatomsxmax`: Maximum x-axis for vAtoms plots (default: -100, auto-scaled).  
+- `-vatomsymin`: Minimum y-axis for vAtoms plots (default: -100, auto-scaled).  
+- `-vatomsymax`: Maximum y-axis for vAtoms plots (default: -100, auto-scaled).
   
 **Note:** You can use either `-percent` or `-number` to select atoms for ΔV calculation. If both are provided, `-number` takes precedence.  
   
 ### Example Usage  
-We recommend that users create a bash script to run the `energies_final.py` program. We will call it `run_energies_final.sh`. This makes keeping track of arguments easier. Here is an example:
+We recommend that users create a bash script to run the program. We will call it `run_energies_final_and_vAtomsImages.sh`. This makes updating and keeping track of arguments easier. Here is an example:
 ```
-#run energies_final.py	 Energy_per_atom Ga,N
-python energies_final.py -2.91250895 -8.31707533 -percent 0.85 -poscar ./POSCAR -vatoms ./vAtoms_output.csv -correction ./energies_correction.csv
+#run delta_v_E_final.py	 Energy_per_atom Ga,N
+python delta_v_E_final.py -mu -2.91250895 -8.31707533 -percent 0.85 -poscar ./POSCAR -vatoms ./vAtoms_output.csv -correction ./energies_correction.csv
 ```
+### Example Output
 
-`energies_final.py` produces `energies_final.csv` with the following format:
+`energies_final_and_vAtomsImages.py` produces `energies_final.csv` with the following format:
 ```
 Defect Name,Charge,Bulk Energy,Correction Energy,delta V,Std Deviation  
 bulk,0.0,-779.26382452,0.0,0.0,0.0  
@@ -246,6 +251,8 @@ This file can be created manually if these calculations have been done using ano
 - **Potential Alignment (ΔV)**: Also from `defect_energy_info.yaml` (reported as alignment energy). Compute ΔV using:  $\Delta V =  \frac{E_\text{align}}{q}$ where $q$ is the defect charge.  
 - **Standard Deviation of ΔV**: Not provided in PyDefect; can set to `0` if unknown.
 
+The Program also puts all $\Delta V$ plots into a folder named `vAtomsImages`. Here is an example of one such plot:
+![Alt text](images/vAtoms_for_Va_Ga_-3.png)
 # Step 2. Plotting
 
 
