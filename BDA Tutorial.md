@@ -252,7 +252,8 @@ This file can be created manually if these calculations have been done using ano
 - **Standard Deviation of ΔV**: Not provided in PyDefect; can set to `0` if unknown.
 
 The Program also puts all $\Delta V$ plots into a folder named `vAtomsImages`. Here is an example of one such plot:
-![Alt text](images/vAtoms_for_Va_Ga_-3.png)
+<img src="images/vAtoms_for_Va_Ga_-3.png" alt="ΔV vs Radius for Va_Ga -3" width="500">
+*Figure 1: ΔV plotted as a function of radial distance for the Va_Ga -3 defect.*
 # Step 2. Plotting
 
 
