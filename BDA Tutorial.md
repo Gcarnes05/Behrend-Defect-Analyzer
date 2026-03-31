@@ -227,8 +227,8 @@ Once `energies_correction.csv` and `vAtoms_output.csv` are ready, use `energies_
 ### Example Usage  
 We recommend that users create a bash script to run the program. We will call it `run_energies_final_and_vAtomsImages.sh`. This makes updating and keeping track of arguments easier. Here is an example:
 ```
-#run delta_v_E_final.py	 Energy_per_atom Ga,N
-python delta_v_E_final.py -mu -2.91250895 -8.31707533 -percent 0.85 -poscar ./POSCAR -vatoms ./vAtoms_output.csv -correction ./energies_correction.csv
+#run energies_final_and_vAtomsImages.py	 Energy_per_atom Ga,N
+python energies_final_and_vAtomsImages.py -mu -2.91250895 -8.31707533 -percent 0.85 -poscar ./POSCAR -vatoms ./vAtoms_output.csv -correction ./energies_correction.csv
 ```
 ### Example Output
 
