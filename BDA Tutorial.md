@@ -234,7 +234,7 @@ python energies_final_and_vAtomsImages.py -mu -2.91250895 -8.31707533 -percent 0
 
 `energies_final_and_vAtomsImages.py` produces `energies_final.csv` with the following format:
 ```
-Defect Name, Charge, Bulk Energy, Correction Energy, delta V, Std Deviation 
+Defect Name, Charge, Bulk Energy, Correction Energy, Delta V, Std Deviation 
 bulk,0.0,-779.26382452,0.0,0.0,0.0  
 Va_Ga,0.0,-769.12439871,0.0,-0.1134629125,0.008629802275897968  
 Va_Ga,-1.0,-766.05547513,0.1844,-0.10367685625,0.014714400975998342  
