@@ -246,7 +246,7 @@ Va_Ga,-3.0,-759.18076603,1.6596,-0.08617888124999998,0.03630872044557992
 This file can be created manually if these calculations have been done using another tool. If using PyDefect, the information can be found in the following files:
 - **Defect Name**: Name of the defect directory (e.g., `Va_Ga_0/`).  
 - **Charge**: Encoded in the defect directory name (e.g., `Va_Ga_-1/` → `-1`).  
-- **Bulk Energy**: Extract from `OUTCAR` of the bulk calculation.  
+- **Bulk Energy**: Extract from `OUTCAR` of each calculation.  
 - **Correction Energy ($E_\text{corr}$)**: Found in `defect_energy_info.yaml`.  
 - **Potential Alignment (ΔV)**: Also from `defect_energy_info.yaml` (reported as alignment energy). Compute ΔV using:  $\Delta V =  \frac{E_\text{align}}{q}$ where $q$ is the defect charge.  
 - **Standard Deviation of ΔV**: Not provided in PyDefect; can set to `0` if unknown.
