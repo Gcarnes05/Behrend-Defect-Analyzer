@@ -11,7 +11,7 @@ directories=$(ls -d */)
 
 rm ./energies_correction.csv
 
-echo "Defect Name, Bulk Energy, Correction Energy" >> ./energies_correction.csv
+echo "Defect Name,Bulk Energy,Correction Energy" >> ./energies_correction.csv
 
 bulk="../latticeRelax/"
 free_en=$(grep TOTEN "$bulk"OUTCAR | tail -1 | awk '{printf $5}')
