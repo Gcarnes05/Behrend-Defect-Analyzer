@@ -1,3 +1,4 @@
+
 # Tutorial of Behrend Defect Analyzer (BDA)
 
 This page explains how to use the `BDA` code.
@@ -10,7 +11,7 @@ The BDA is a tool used to calculate formation energies using the quantum simulat
 The formation energy of a defect is calculated as:
 
 $$
-E_\text{form}= E_\text{tot}^\text{defect} - E_\text{tot}^\text{bulk} - \sum_i n_i \mu_i + q(E_\text{vbm}+E_F+\Delta V) + E_\text{corr}
+E_\text{form}= E_\text{tot}^\text{defect} - E_\text{tot}^\text{bulk} - \sum_i n_i \mu_i^{eff} + q(E_\text{vbm}+E_F+\Delta V) + E_\text{corr}
 $$
 
 Where:
@@ -18,7 +19,9 @@ Where:
 - $E_\text{tot}^\text{defect}$ is the total energy of the defect supercell  
 - $E_\text{tot}^\text{bulk}$ is the total energy of the pristine bulk  
 - $n_i$ is the number of atoms added or removed  
-- $\mu_i$ is the chemical potential of species $i$  
+- $\mu_i^{eff}$ is the chemical potential of species $i$, defined as: $\mu_i^{eff}=\mu_i^{bulk}+\Delta \mu_i$
+	- $\mu_i^{\mathrm{bulk}}$ is the bulk reservoir energy per atom of species $i$
+	- $\Delta \mu_i$ is the relative chemical potential of species $i$ (e.g., Ga-rich)
 - $q$ is the defect charge  
 - $E_F$ is the Fermi level  
 - $E_\text{vbm}$ is the valence band maximum  
@@ -71,8 +74,9 @@ The BDA also assumes the following formatting for POSCAR files. The header must 
     ```
    - Note: when using PyDefect, the defect center does not appear in the first line of the POSCAR file. To locate it, refer to the defect_entry.json file, where it is specified as \"defect_center\".
    
-The details of the workflow are explained step by step, using an example of GaN calculated with the PBE and HSE functional.
+The plotting workflow requires a chemical potential input file (`target_vertices_<element>_Rich.yaml`) that defines the growth conditions used in the defect formation energy calculations (e.g., Ga-rich or N-rich). A detailed description of the file format and naming convention is provided in Step 2.
 
+The rest of the details for the workflow are explained step by step, using GaN as an example, calculated with the PBE and HSE functional.
 # Step 1. Energy Corrections ($E_{corr}$, $\Delta V$)
 
 In charged-defect VASP calculations, the defect artificially interacts with its periodic images due to the finite size of the simulation. A correction is required to gain the isolated defect formation energy. Christopher Freysoldt created a program to compute this correction ($E_{corr}$). It also generates data to determine the shift in the long-range electrostatic potential ($\Delta V$). The `run_sxdefectalign_code` script uses Freysoldt's program called `sxdefectalign`, which must first be installed. 
@@ -205,6 +209,17 @@ stop,Va_Ga_-1/
 ...  
 stop
 ```
+**Note:**
+
+- Column 1: Distance from defect (Å), radial distance of each atom from the defect center. Used as the x-axis in ΔV plots.
+
+- Column 2: Raw potential difference ($ΔV_{raw} = V_{\text{defect}} - V_{\text{bulk}}$).
+
+- Column 3: Model long-range potential.  
+
+- Column 4: Corrected potential ($\Delta V_{\text{aligned}} = \Delta V_{\text{raw}} - V_{\text{model}}$).
+
+- Column 5: Weighting term, internal value from sxdefectalign (e.g., weighting or screening-related information).
 ## Energies Final and $\Delta V$ Plots
 
 Once `energies_correction.csv` and `vAtoms_output.csv` are ready, use `energies_final_and_vAtomsImages.py` to compute the potential alignment corrections (ΔV) for each defect and use them to create the energies final file. This script also calculates and adds the standard deviation of ΔV, based on the chosen set of atoms, to the energies final file. Finally, it will plot $\Delta V$ vs radial distance for each defect. 
@@ -222,7 +237,7 @@ Once `energies_correction.csv` and `vAtoms_output.csv` are ready, use `energies_
 - `-vatomsymin`: Minimum y-axis for vAtoms plots (default: -100, auto-scaled).  
 - `-vatomsymax`: Maximum y-axis for vAtoms plots (default: -100, auto-scaled).
   
-**Note:** You can use either `-percent` or `-number` to select atoms for ΔV calculation. If both are provided, `-number` takes precedence.  
+**Note:** You can use either `-percent` or `-number` to select atoms for $\Delta V$ calculation. If both are provided, `-number` takes precedence.  
   
 ### Example Usage  
 We recommend that users create a small bash script to run the program. We will call it `run_energies_final_and_vAtomsImages.sh`. This makes updating and keeping track of arguments easier. Here is an example:
@@ -234,7 +249,7 @@ python energies_final_and_vAtomsImages.py -mu -2.91250895 -8.31707533 -percent 0
 
 `energies_final_and_vAtomsImages.py` produces `energies_final.csv` with the following format:
 ```
-Defect Name, Charge, Bulk Energy, Correction Energy, Delta V, Std Deviation 
+Defect Name,Charge,Bulk Energy,Correction Energy,Delta V,Std Deviation 
 bulk,0.0,-779.26382452,0.0,0.0,0.0  
 Va_Ga,0.0,-769.12439871,0.0,-0.1134629125,0.008629802275897968  
 Va_Ga,-1.0,-766.05547513,0.1844,-0.10367685625,0.014714400975998342  
@@ -251,11 +266,89 @@ This file can be created manually if these calculations have been done using ano
 - **Potential Alignment (ΔV)**: Also from `defect_energy_info.yaml` (reported as alignment energy). Compute ΔV using:  $\Delta V =  \frac{E_\text{align}}{q}$ where $q$ is the defect charge.  
 - **Standard Deviation of ΔV**: Not provided in PyDefect; can set to `0` if unknown.
 
-The Program also puts all $\Delta V$ plots into a folder named `vAtomsImages`. Here is an example of one such plot:
+The program saves all ΔV plots in the `vAtomsImages` folder. These plots should be manually inspected to confirm their physical validity. An example is shown below.
 <img src="images/vAtoms_for_Va_Ga_-3.png" alt="ΔV vs Radius for Va_Ga -3" width="600">
 # Step 2. Plotting
+Plotting the formation energy vs the fermi energy is a good way to qualitatively interpret which defects are most likely to be present when the material has a particular fermi energy. The `formation_vs_fermi.py` program will create these plots using files previously created in the tutorial. 
+## Relative Chemical Potential Input ($\Delta \mu$)
+The chemical potentials used in the formation energy calculations are provided through a `.yaml` file, which defines the environment (e.g., Ga-rich or N-rich). Each file must contain only a single chemical potential condition, as the current implementation does not support multiple environments within one file. When comparing different growth limits, separate YAML files must therefore be created for each condition.
+
+We recommend using the naming convention `target_vertices_<Element>_Rich.yaml`, where `<Element>` indicates the species in excess under the chosen growth condition. For example, `target_vertices_Ga_Rich.yaml` corresponds to Ga-rich conditions, while `target_vertices_N_Rich.yaml` corresponds to N-rich conditions. The default file name used by the code is `target_vertices.yaml`, which is intended only for single-condition workflows and is not recommended for systematic comparisons across multiple environments.
+
+Each YAML file should contain a single chemical potential block in the following format:
+```
+target: GaN
+A:
+    chem_pot:
+        Ga: 0.0
+        N: -1.31365
+```
+
+### Program Arguments  
+-   `-plotsingledefect`: Generate individual plots for each defect (default: `False`)
+-   `-poscar`: Path to the POSCAR file (default: `./POSCAR`)
+-   `-correction`: Path to the final correction energies file (default: `./energies_final.csv`)
+-   `-chempot`: Path to the chemical potential YAML file (default: `./target_vertices.yaml`)
+-   `-ymax`: Maximum y-axis value for defect formation energy plot (default: `7`)
+-   `-xmax`: Maximum x-axis value for defect plot (default: `-3`; which sets to bandgap)
+-   `-ymin`: Minimum y-axis value for defect formation energy plot (default: `-7`)
+-   `-xmin`: Minimum x-axis value for defect plot (default: `0`)
+-   `-testfe`: Show defect charge-state information at a specified Fermi level (default: `-1`)
+-   `-kT`: Thermal energy in eV used for occupation broadening (default: `0.05`)
+-   `-printQ`: Print charge-state values at the intrinsic Fermi level (default: `False`)
+-   `-colors`: List of colors for plotting (default: `["red", "green", "blue", "orange"]`)
+-   `-legloc`: Legend location identifier for plots (default: `8`)
+-   `-hse`: `[band gap, VBM]` correction values for HSE calculations (default: `None`)
+-   `--save_as`: Output filename prefix for generated plots (default: `combinedDefects`)
+-   `-bg`: Band gap energy in eV (required)
+-   `-vbm`: Valence band maximum offset in eV (required)
+-   `-mu`: Bulk reservoir energies per atom in POSCAR order (required)
 
 
+## Example Usage  
+We recommend that users create a small bash script to run the program. We will call it `run_formation_vs_fermi.sh`. This makes updating and keeping track of arguments easier. Here is an example:
+```
+#run formation_vs_fermi.py    Energy_per_atom Ga,N                                          						                    HSE_BG  HSE_VBM
+python formation_vs_fermi.py -mu -2.91250895 -8.31707533 -bg 1.7378 -vbm 3.4099 -chempot target_vertices_Ga_Rich.yaml -ymin 0 -ymax 8 -hse 3.3212 2.3829 --save_as GaRich
+python formation_vs_fermi.py -mu -2.91250895 -8.31707533 -bg 1.7378 -vbm 3.4099 -chempot target_vertices_N_Rich.yaml -ymin 0 -ymax 8 -hse 3.3212 2.3829 --save_as NRich
+```
+## Output
+
+The program prints key defect information to the terminal, including:
+
+- Element names in POSCAR order  
+- User-defined chemical potentials (`μ`)  
+- Chemical potential shifts (`Δμ`) from the YAML file  
+- Effective chemical potentials (`μ_eff`)  
+- Defect formation energies at the VBM  
+- Charge transition levels (Fermi energies)  
+- Intrinsic Fermi level  
+
+An example output is shown below:
+
+````
+Elements: ['Ga', 'N']
+mu: ['-2.9125', '-8.3171']
+Delta mu: ['0.0000', '-1.3136']
+Effective mu: ['-2.9125', '-9.6307']
+Defect Formation Energies at VBM (1.6400) in eV:
+Va_Ga_0 7.22692
+Va_Ga_-1 8.94392
+Va_Ga_1 6.40571
+Va_Ga_-2 11.30106
+Va_Ga_-3 14.16869
+Transition from 1 to 0 at 0.82130 eV
+Transition from 0 to -1 at 1.71710 eV
+Transition from -1 to -2 at 2.35720 eV
+Transition from -2 to -3 at 2.86770 eV
+
+Intrinisc Fermi Defect Level: 0.8213 eV
+````
+The program will also store the plots with all defects pictured in a directory named `combinedDefects`. Here is an example of one such plot:
+<img src="images/..." alt="" width="600">
+
+Lastly, the program will store the plots with a singular defect pictured in a directory named `chardedDefectPlots`. Optionally, the defects can be plotted individually. They will appear in this directory as a png file with the defect name. Here are examples of plots containing an individual defect and multiple defects:
+<img src="images/..." alt="" width="600">
 ## References
 [1] Yu Kumagai, Naoki Tsunoda, Akira Takahashi, and Fumiyasu Oba. Insights into oxygen vacancies from high-throughput first-principles calculations. *Phys. Rev. Materials*, 5:123803, 2021.  
 [2] Zachery Willard. GitHub profile. https://github.com/zacherywillard, Accessed March 2026.  
@@ -263,4 +356,4 @@ The Program also puts all $\Delta V$ plots into a folder named `vAtomsImages`. H
 [4] G. Kresse and J. Furthmüller. Efficient iterative schemes for ab initio total energy calculations using a plane-wave basis set. *Phys. Rev. B*, 54:11169–11186, 1996.  
 [5] Christoph Freysoldt. Manual for sxdefectalign, version 3.0. Technical report, *MPI Fritz Haber Institute*, August 2022.  
 [6] John L. Lyons and Chris G. Van de Walle. Computationally predicted energies and properties of defects in GaN. *npj Computational Materials*, 3:12, 2017.  
-[7] Nubhav Jain, Shyue Ping Ong, Geoffroy Hautier, Wei Chen, William Davidson Richards, Stephen Dacek, Shreyas Cholia, Dan Gunter, David Skinner, Gerbrand Ceder, and Kristin A. Persson. The Materials Project: A materials genome approach to accelerating materials innovation. *APL Materials*, 1(1):011002, 2013.
+[7] Nubhav Jain, Shyue Ping Ong, Geoffroy Hautier, Wei Chen, William Davidson Richards, Stephen Dacek, Shreyas Cholia, Dan Gunter, David Skinner, Gerbrand Ceder, and Kristin A. Persson. The Materials Project: A materials genome approach to accelerating materials innovation. *APL Materials*, 1(1):011002, 2013.Skinner, Gerbrand Ceder, and Kristin A. Persson. The Materials Project: A materials genome approach to accelerating materials innovation. *APL Materials*, 1(1):011002, 2013.
