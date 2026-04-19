@@ -36,13 +36,12 @@ The BDA assumes the following directory structure:
 ```
     <project_name>
      │
-     ├ POSCAR #Bulk
-     │
      ├ bulk_supercell/ ──
      │                 ├─ OUTCAR
      │                 ├─ LOCPOT
      │
      └ defects/ ── 
+                ├─ POSCAR (Bulk)
                 ├─ energies_final_vAtoms_plots.py
                 ├─ formation_vs_fermi.py
                 ├─ make_vAtoms_output.sh
