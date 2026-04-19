@@ -22,7 +22,7 @@ Here is an example for each defect type:
 This script will generate vacancy and substitution defects in a given POSCAR. The location of the defect will be written at the top of the POSCAR file, this is needed for the `sxdefectalign ` script. This currently does not account for different bonding; it just picks the most central atoms of each type. This script would mostly be useful for ternary materials.
 
 ### Input Files
-BLUK VASP POSCAR (Supercell with no defects)
+BULK VASP POSCAR (Supercell with no defects)
 
 ## charge_defect_generator.sh
 ### Description
