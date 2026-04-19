@@ -8,10 +8,11 @@ Another helpful package is `pydefect`, which provides useful tools for determini
 
 This package will be useful specifically for interstitials, substitution, and vacancy defects. The general format of directory names should be as folloes:
 added element _ removed element _ charge state.
+
 Here is an example of each defect type:
-Vacancy: Va_Rb_0 (neutral charge state)
-Substitution: I_Rb_1 (Iodine in a Rubidium Position +1 Charge State)
-Interstital: I_i1_-1 (Iodine interstitial in i1 position, this name can be changed, in -1 charge state)
+-Vacancy: Va_Rb_0 (neutral charge state)
+-Substitution: I_Rb_1 (Iodine in a Rubidium Position +1 Charge State)
+-Interstital: I_i1_-1 (Iodine interstitial in i1 position, this name can be changed, in -1 charge state)
 
 ## generate_defects.py
 ### Description
