@@ -57,7 +57,7 @@ The run command for this file would look like:
 python energies_final_vAtoms_plots.py -mu -2.91250895 -8.31707533 -percent 0.85
 ```
 There are additional tags that can be seen by using:
-python energies_final_vAtoms_plots.py -help
+`python energies_final_vAtoms_plots.py -help`
 
 ## formation_vs_fermi.py
 ### Description
@@ -71,4 +71,4 @@ The run command for this file would look like:
 python formation_vs_fermi.py -mu -2.91250895 -8.31707533 -bg 1.7378 -vbm 3.4099 --save_as name
 ```
 There are additional tags that can be seen by using:
-python formation_vs_fermi.py -help
+`python formation_vs_fermi.py -help`
