@@ -1,12 +1,12 @@
-# Charge Defect Analysis
+# Behrend Defect Analyzer
 
 This repository is designed to aid in the preparation of VASP input files for analyzing charge defects in materials. The ultimate goal is to determine the intrinsic Fermi energy at which the system becomes charge neutral.
 
 To fully utilize this repository, you will need to download the script `sxdefectalign`, written by Christopher Freysoldt. This tool is used to calculate correction terms related to the periodic boundary conditions in VASP simulations. It also accounts for the long-range electrostatic potentials assumed to follow a Gaussian distribution.
 
-Another helpful package is `pydefect`, which provides useful tools for determining the chemical potentials of the constituent elements. However, this step can be skipped as long as your potential file follows the same format as shown below.
+Another helpful package is `pydefect`, which provides useful tools for determining the chemical potentials of the constituent elements.
 
-This package will be useful specifically for interstitials, substitution, and vacancy defects. The genearl format of director names should be as folloes:
+This package will be useful specifically for interstitials, substitution, and vacancy defects. The general format of directory names should be as folloes:
 added element _ removed element _ charge state.
 Here is an example of each defect type:
 Vacancy: Va_Rb_0 (neutral charge state)
