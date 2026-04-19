@@ -318,7 +318,7 @@ The program will also store the plots with all defects pictured in a directory n
 
 Lastly, the program will store the plots with a singular defect pictured in a directory named `chardedDefectPlots`. Optionally, the defects can be plotted individually. They will appear in this directory as a png file with the defect name. Here are examples of plots containing an individual defect and multiple defects:
 <img src="images/..." alt="" width="600">
-## References
+# References
 [1] Yu Kumagai, Naoki Tsunoda, Akira Takahashi, and Fumiyasu Oba. Insights into oxygen vacancies from high-throughput first-principles calculations. *Phys. Rev. Materials*, 5:123803, 2021.  
 [2] Zachery Willard. GitHub profile. https://github.com/zacherywillard, Accessed March 2026.  
 [3] Evan Payne. GitHub profile. https://github.com/EvanPayne22, Accessed March 2026.  
