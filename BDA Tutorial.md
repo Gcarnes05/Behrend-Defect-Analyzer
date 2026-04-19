@@ -267,7 +267,9 @@ This file can be created manually if these calculations have been done using ano
 - **Standard Deviation of ΔV**: Not provided in PyDefect; can set to `0` if unknown.
 
 The program saves all ΔV plots in the `vAtomsImages` folder. These plots should be manually inspected to confirm their physical validity. An example is shown below.
+
 <img src="images/vAtoms_for_Va_Ga_-3.png" alt="ΔV vs Radius for Va_Ga -3" width="600">
+
 # Step 2. Plotting
 Plotting the formation energy vs the fermi energy is a good way to qualitatively interpret which defects are most likely to be present when the material has a particular fermi energy. The `formation_vs_fermi.py` program will create these plots using files previously created in the tutorial. 
 ## Relative Chemical Potential Input ($\Delta \mu$)
