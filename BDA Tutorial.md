@@ -43,12 +43,10 @@ The BDA assumes the following directory structure:
      │                 ├─ LOCPOT
      │
      └ defects/ ── 
-                ├─ run_complete.sh
-                ├─ complete_def_en_ef_min.py
-                ├─ energies_final.py
-                ├─ no_vatoms.py
+                ├─ energies_final_vAtoms_plots.py
+                ├─ formation_vs_fermi.py
                 ├─ make_vAtoms_output.sh
-                ├─ run_sxdefectalign_code.sh
+                ├─ run_sxdefectalign.sh
                 ├─ target_vertices_X_Rich.yaml
                 ├─ target_vertices_Y_Rich.yaml
                 ├─ Va_X_0/
@@ -58,7 +56,7 @@ The BDA assumes the following directory structure:
 ```
 We recommend that users follow the same directory structure if possible. The defect directories must also follow the naming convention shown. 
 
-The BDA also assumes the following formatting for POSCAR files. The header must include the defect center. ie three real values representing the x,y,z coordinates of the defect in lattice units; the rest of the POSCAR should have the standard format see for exampl: [Materials Project](https://next-gen.materialsproject.org/materials) [7] and below:
+The BDA also assumes the following formatting for POSCAR files. The header must include the defect center (i.e. three values representing the x,y,z coordinates of the defect in lattice units). The rest of the POSCAR should have the standard format, see for example: [Materials Project](https://next-gen.materialsproject.org/materials) [7] and below:
 
     ```
     0.083333 0.166666 0.499553 #defect center
@@ -79,7 +77,7 @@ The plotting workflow requires a chemical potential input file (`target_vertices
 The rest of the details for the workflow are explained step by step, using GaN as an example, calculated with the PBE and HSE functional.
 # Step 1. Energy Corrections ($E_{corr}$, $\Delta V$)
 
-In charged-defect VASP calculations, the defect artificially interacts with its periodic images due to the finite size of the simulation. A correction is required to gain the isolated defect formation energy. Christopher Freysoldt created a program to compute this correction ($E_{corr}$). It also generates data to determine the shift in the long-range electrostatic potential ($\Delta V$). The `run_sxdefectalign_code` script uses Freysoldt's program called `sxdefectalign`, which must first be installed. 
+In charged-defect VASP calculations, the defect artificially interacts with its periodic images due to the finite size of the simulation. A correction is required to gain the isolated defect formation energy. Christopher Freysoldt created a program to compute this correction ($E_{corr}$). It also generates data to determine the shift in the long-range electrostatic potential ($\Delta V$). The `run_sxdefectalign` script uses Freysoldt's program called `sxdefectalign`, which must first be installed. 
 
 **Download and setup**
 Download at https://sxrepo.mpie.de/projects/sphinx-add-ons/files, then download sxdefectalign.bz2 and install with the following:
@@ -88,11 +86,11 @@ bunzip2 sxdefectalign.bz2
 chmod +x sxdefectalign
 mv sxdefectalign ~/work/bin/
 ```
-The sxdefectalign program is expected to be located in a directory named bin inside of your work directory. If the bin folder does not exist, create it and move the Freysoldt `sxdefectalign` inside. The path is hard coded in the `run_sxdefectalign_code` script and must be updated if Freysoldt's `sxdefectalign` is installed elsewhere. The `make_vAtoms_output` script is also required. It automatically searches all subdirectories in the working directory, reads the `vAtoms.dat` files created by `run_sxdefectalign_code`, formats the vAtom data as comma-seperated values, and then stores them in a file named `vAtoms_output.csv`. 
+The `sxdefectalign` program is expected to be located in a directory named bin inside of your work directory. If the bin folder does not exist, create it and move the Freysoldt `sxdefectalign` inside. The path is hard coded in the `run_sxdefectalign` script and must be updated if Freysoldt's `sxdefectalign` is installed elsewhere. The `make_vAtoms_output` script is also required. It automatically searches all subdirectories in the working directory, reads the `vAtoms.dat` files created by `run_sxdefectalign`, formats the vAtom data as comma-seperated values, and then stores them in a file named `vAtoms_output.csv`. 
 
 
 **Configuring the Scripts**
-To use the `run_sxdefectalign_script` edits must first be made as described below.
+To use `run_sxdefectalign`, edits must first be made as described below.
 
 -   Set the path to the bulk directory in line 13:
 
@@ -112,34 +110,23 @@ The `make_vAtoms_output` script will not require any modification.
 
 ## Running the Scripts
 
-First make the `run_sxdefectalign_code` executable in the terminal and run:
+First make the `run_sxdefectalign` executable in the terminal and run:
 
 ``` {.bash language="bash"}
-chmod +x run_sxdefectalign_code.sh
-./run_sxdefectalign_code.sh
+chmod +x run_sxdefectalign.sh
+./run_sxdefectalign.sh
 ```
 
-During execution, the script:
-
-1.  Identifies all defect subdirectories in the working directory.
-
-2.  Reads the bulk reference energy from the bulk OUTCAR file and writes it as the first entry in energies_correction.csv.
-
-3.  For each defect directory that contains a LOCPOT file:
-
-    1.  Determines the defect name and extracts the charge state from the directory name.
-
-    2.  Locates the defect center from the first line of the corresponding POSCAR.
-
-    3.  Converts the extracted charge into the sign convention required by sxdefectalign.
-
-    4.  Executes sxdefectalign using the defect and bulk LOCPOT files and the user-specified dielectric tensor. This generates vAtoms.dat files for each directory, which will be used for the potential alignment correction. 
-
-    5.  Extracts the correction energy from the sxdefectalign output.
-	
-    6.  Reads the defect total energy from the defect OUTCAR.
-
-    7.  Appends the defect name, total energy, and correction energy to energies_correction.csv.
+During execution, the script prints the defect charge state, defect directory name, and the corresponding correction energy. An example output is shown below:
+```
+-0
+Defect Va_Ga_0/: correction energy = 0
+1
+Defect Va_Ga_-1/: correction energy = 0.185936
+2
+Defect Va_Ga_-2/: correction energy = 0.7437433
+...
+```
 
 
 Then make `make_vAtoms_output` executable and run:
@@ -147,29 +134,10 @@ Then make `make_vAtoms_output` executable and run:
 chmod +x make_vAtoms_output.sh
 ./make_vAtoms_output.sh
 ```
--   The script prints nothing by default but will populate vAtoms_output.csv.
-    
-During execution, the script:
-
-1.  Lists all subdirectories in the current working directory.
-    
-2.  Deletes any existing vAtoms_output.csv to prevent appending to old data.
-    
-3.  Writes a header row to the CSV.
-    
-4.  Loops through each defect directory:
-    
-    -   Checks for the presence of vAtoms.dat.
-        
-    -   Writes a directory marker into the CSV.
-        
-    -   Appends the contents of vAtoms.dat, formatting it as comma-separated values.
-        
-5.  Adds a final empty line and stop marker to the CSV for clarity.
-   
-
+ The script prints nothing by default but will populate vAtoms_output.csv.
+  
 ## Outputs
-`run_sxdefectalign_code` produces `energies_correction.csv` which contains: 
+`run_sxdefectalign` produces `energies_correction.csv` which contains: 
   
 - Header row: Defect Name, Bulk Energy, Correction Energy ($E_{Corr}$)  
 
@@ -219,10 +187,10 @@ stop
 
 - Column 4: Corrected potential ($\Delta V_{\text{aligned}} = \Delta V_{\text{raw}} - V_{\text{model}}$).
 
-- Column 5: Weighting term, internal value from sxdefectalign (e.g., weighting or screening-related information).
+- Column 5: Weighting term, internal value from `sxdefectalign` (e.g., weighting or screening-related information).
 ## Energies Final and $\Delta V$ Plots
 
-Once `energies_correction.csv` and `vAtoms_output.csv` are ready, use `energies_final_and_vAtomsImages.py` to compute the potential alignment corrections (ΔV) for each defect and use them to create the energies final file. This script also calculates and adds the standard deviation of ΔV, based on the chosen set of atoms, to the energies final file. Finally, it will plot $\Delta V$ vs radial distance for each defect. 
+Once `energies_correction.csv` and `vAtoms_output.csv` are ready, use `energies_final_vAtoms_plots.py` to compute the potential alignment corrections (ΔV) for each defect and use them to create the energies final file. This script also calculates and adds the standard deviation of ΔV, based on the chosen set of atoms, to the energies final file. Finally, it will plot $\Delta V$ vs radial distance for each defect. 
   
 ### Program Arguments  
 - `-poscar`: Path to the POSCAR file (default: `./POSCAR`)  
@@ -240,14 +208,14 @@ Once `energies_correction.csv` and `vAtoms_output.csv` are ready, use `energies_
 **Note:** You can use either `-percent` or `-number` to select atoms for $\Delta V$ calculation. If both are provided, `-number` takes precedence.  
   
 ### Example Usage  
-We recommend that users create a small bash script to run the program. We will call it `run_energies_final_and_vAtomsImages.sh`. This makes updating and keeping track of arguments easier. Here is an example:
+We recommend that users create a small bash script to run the program. We will call it `run_energies_final_vAtoms_plots.sh`. This makes updating and keeping track of arguments easier. Here is an example:
 ```
-#run energies_final_and_vAtomsImages.py	 Energy_per_atom Ga,N
-python energies_final_and_vAtomsImages.py -mu -2.91250895 -8.31707533 -percent 0.85 -poscar ./POSCAR -vatoms ./vAtoms_output.csv -correction ./energies_correction.csv
+#run energies_final_vAtoms_plots.py	 Energy_per_atom Ga,N
+python energies_final_vAtoms_plots.py -mu -2.91250895 -8.31707533 -percent 0.85 -poscar ./POSCAR -vatoms ./vAtoms_output.csv -correction ./energies_correction.csv
 ```
 ### Example Output
 
-`energies_final_and_vAtomsImages.py` produces `energies_final.csv` with the following format:
+`energies_final_vAtoms_plots.py` produces `energies_final.csv` with the following format:
 ```
 Defect Name,Charge,Bulk Energy,Correction Energy,Delta V,Std Deviation 
 bulk,0.0,-779.26382452,0.0,0.0,0.0  
@@ -266,7 +234,7 @@ This file can be created manually if these calculations have been done using ano
 - **Potential Alignment (ΔV)**: Also from `defect_energy_info.yaml` (reported as alignment energy). Compute ΔV using:  $\Delta V =  \frac{E_\text{align}}{q}$ where $q$ is the defect charge.  
 - **Standard Deviation of ΔV**: Not provided in PyDefect; can set to `0` if unknown.
 
-The program saves all ΔV plots in the `vAtomsImages` folder. These plots should be manually inspected to confirm their physical validity. An example is shown below.
+The program saves all ΔV plots in the `vAtomsImages` folder. These plots should be manually inspected to confirm their physical validity. An example is shown below:
 
 <img src="images/vAtoms_for_Va_Ga_-3.png" alt="ΔV vs Radius for Va_Ga -3" width="600">
 
@@ -358,4 +326,4 @@ Lastly, the program will store the plots with a singular defect pictured in a di
 [4] G. Kresse and J. Furthmüller. Efficient iterative schemes for ab initio total energy calculations using a plane-wave basis set. *Phys. Rev. B*, 54:11169–11186, 1996.  
 [5] Christoph Freysoldt. Manual for sxdefectalign, version 3.0. Technical report, *MPI Fritz Haber Institute*, August 2022.  
 [6] John L. Lyons and Chris G. Van de Walle. Computationally predicted energies and properties of defects in GaN. *npj Computational Materials*, 3:12, 2017.  
-[7] Nubhav Jain, Shyue Ping Ong, Geoffroy Hautier, Wei Chen, William Davidson Richards, Stephen Dacek, Shreyas Cholia, Dan Gunter, David Skinner, Gerbrand Ceder, and Kristin A. Persson. The Materials Project: A materials genome approach to accelerating materials innovation. *APL Materials*, 1(1):011002, 2013.Skinner, Gerbrand Ceder, and Kristin A. Persson. The Materials Project: A materials genome approach to accelerating materials innovation. *APL Materials*, 1(1):011002, 2013.
+[7] Nubhav Jain, Shyue Ping Ong, Geoffroy Hautier, Wei Chen, William Davidson Richards, Stephen Dacek, Shreyas Cholia, Dan Gunter, David Skinner, Gerbrand Ceder, and Kristin A. Persson. The Materials Project: A materials genome approach to accelerating materials innovation. *APL Materials*, 1(1):011002, 2013.
