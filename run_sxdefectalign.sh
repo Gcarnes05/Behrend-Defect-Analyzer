@@ -42,6 +42,7 @@ do
                 free_en=$(grep "free  en" OUTCAR | tail -1 | awk '{print $5}')
                 results=$(tail -1 "results.txt" | awk '{print $4}')
 
+                echo "$a, $free_en, $results"
                 echo "$a, $free_en, $results" >> ../energies_correction.csv
                 
         fi
