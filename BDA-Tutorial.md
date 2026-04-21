@@ -119,11 +119,13 @@ chmod +x run_sxdefectalign.sh
 During execution, the script prints the defect charge state, defect directory name, and the corresponding correction energy. An example output is shown below:
 ```
 -0
-Defect Va_Ga_0/: correction energy = 0
+Va_Ga_0/, -1072.37408904, 0
 1
-Defect Va_Ga_-1/: correction energy = 0.185936
+Va_Ga_-1/, -1069.98956324, 0.164549
+-1
+Va_Ga_1/, -1074.68454378, 0.164549
 2
-Defect Va_Ga_-2/: correction energy = 0.7437433
+Va_Ga_-2/, -1067.30102614, 0.658195
 ...
 ```
 
