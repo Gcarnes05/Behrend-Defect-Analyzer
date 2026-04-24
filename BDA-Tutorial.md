@@ -11,7 +11,7 @@ The BDA is a tool used to calculate formation energies using the quantum simulat
 The formation energy of a defect is calculated as:
 
 $$
-E_\text{form}= E_\text{tot}^\text{defect} - E_\text{tot}^\text{bulk} - \sum_i n_i \mu_i^{eff} + q(E_\text{vbm}+E_F+\Delta V) + E_\text{corr}
+E_\text{form}= E_\text{tot}^\text{defect} - E_\text{tot}^\text{bulk} - \sum_i \Delta n_i \mu_i^{eff} + q(E_\text{vbm}+E_F+\Delta V) + E_\text{corr}
 $$
 
 Where:
