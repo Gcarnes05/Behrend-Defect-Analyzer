@@ -315,11 +315,10 @@ Transition from -2 to -3 at 2.86770 eV
 
 Intrinisc Fermi Defect Level: 0.8213 eV
 ````
-The program will also store the plots with all defects pictured in a directory named `combinedDefects`. Here is an example of one such plot:
-<img src="images/..." alt="" width="600">
+The program will also store the plots with all defects pictured in a directory named `chardedDefectPlots`. Here is an example of one such plot:
+<img src="images/GaRich_HSE_PBE.png" alt="" width="600">
 
-Lastly, the program will store the plots with a singular defect pictured in a directory named `chardedDefectPlots`. Optionally, the defects can be plotted individually. They will appear in this directory as a png file with the defect name. Here are examples of plots containing an individual defect and multiple defects:
-<img src="images/..." alt="" width="600">
+Lastly, if the `plotsingledefect` arguement is set to true, it will plot each defect alone and name the file with the defect name. They can be found in the same directory. 
 # References
 [1] Yu Kumagai, Naoki Tsunoda, Akira Takahashi, and Fumiyasu Oba. Insights into oxygen vacancies from high-throughput first-principles calculations. *Phys. Rev. Materials*, 5:123803, 2021.  
 [2] Zachery Willard. GitHub profile. https://github.com/zacherywillard, Accessed March 2026.  
