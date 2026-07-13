@@ -38,7 +38,7 @@ do
                 fi
                 echo $charge
                 #Runs the sxdefect code: change values/locations as needed
-                ~/work/bin/sxdefectalign --ecut 30 --charge $charge --tensor 11.04,11.04,11.04  --center $defectLocation --relative --vdef ./LOCPOT --vref ../"$bulk"LOCPOT --vasp >> results.txt
+                ~/work/bin/sxdefectalign --ecut 30 --charge $charge --tensor 11.04,11.04,11.04  --center $defectLocation --relative --vdef ./LOCPOT --vref "$bulk"LOCPOT --vasp >> results.txt
                 free_en=$(grep "free  en" OUTCAR | tail -1 | awk '{print $5}')
                 results=$(tail -1 "results.txt" | awk '{print $4}')
 
