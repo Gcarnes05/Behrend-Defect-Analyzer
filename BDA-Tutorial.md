@@ -287,33 +287,58 @@ python formation_vs_fermi.py -mu -2.91250895 -8.31707533 -bg 1.7378 -vbm 3.4099 
 
 The program prints key defect information to the terminal, including:
 
-- Element names in `target_verticies` order  
-- User-defined chemical potentials (`μ`)  
-- Chemical potential shifts (`Δμ`) from the YAML file  
-- Effective chemical potentials (`μ_eff`)  
-- Defect formation energies at the VBM  
-- Charge transition levels (Fermi energies)  
-- Intrinsic Fermi level  
+- Number and names of elements in the defect system 
+- Bulk and defect POSCAR compositions 
+- Changes in elemental composition between the bulk and defect structures 
+- Validation of defect energies in `energies_final.csv` 
+- Effective chemical potentials (`μ_eff`) 
+- Chemical potential terms and their contributions to the formation energy
+- Defect formation energies at the VBM 
+- Charge transition levels (Fermi energies) 
+- Intrinsic Fermi defect level
 
 An example output is shown below:
 
 ````
-Elements: ['Ga', 'N']
-mu: ['-2.9125', '-8.3171']
-Delta mu: ['0.0000', '-1.3136']
-Effective mu: ['-2.9125', '-9.6307']
-Defect Formation Energies at VBM (1.6400) in eV:
-Va_Ga_0 7.22692
-Va_Ga_-1 8.94392
-Va_Ga_1 6.40571
-Va_Ga_-2 11.30106
-Va_Ga_-3 14.16869
-Transition from 1 to 0 at 0.82130 eV
-Transition from 0 to -1 at 1.71710 eV
-Transition from -1 to -2 at 2.35720 eV
-Transition from -2 to -3 at 2.86770 eV
+Chemical potential values: 2
+Number of unique elements: 2 
+Elements: Si, N
 
-Intrinisc Fermi Defect Level: 0.8213 eV
+Bulk POSCAR composition: 
+Si 216
+
+Defect POSCAR composition: 
+Si 214 
+N 1
+
+POSCAR Composition change:
+ N +1 
+ Si -2
+ 
+ energies_final.csv validation passed
+ Defect found in energies_final.csv: 
+ Va_Si
+ 
+ Effective chemical potentials: 
+ N -16.596500 eV 
+ Si -5.399894 eV
+ 
+ Chemical potential terms: 
+ N: Delta_N = +1, mu = -16.596500, contribution = 16.596500 eV 
+ Si: Delta_N = -2, mu = -5.399894, contribution = -10.799788 eV
+ 
+ Defect Formation Energies at VBM (5.3713) in eV:
+ Va_Si_0 8.868618 eV
+ Va_Si_-1 9.590654 eV
+ Va_Si_1 8.363258 eV
+ Va_Si_-2 10.686338 eV
+ Va_Si_2 8.229655 eV
+ Transition from 2 to 1 at 0.13370 eV
+ Transition from 1 to 0 at 0.50540 eV
+ Transition from 0 to -1 at 0.72210 eV
+ Transition from -1 to -2 at 1.09570 eV
+
+Intrinsic Fermi Defect Level: 0.5054 eV
 ````
 The program will also store the plots with all defects pictured in a directory named `chargeDefectPlots`. Here is an example of one such plot:
 <img src="images/..." alt="" width="600">
