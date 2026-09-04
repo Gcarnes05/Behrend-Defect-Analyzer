@@ -1,4 +1,3 @@
-
 # Tutorial of Behrend Defect Analyzer (BDA)
 
 This page explains how to use the `BDA` code.
@@ -18,7 +17,7 @@ Where:
 
 - $E_\text{tot}^\text{defect}$ is the total energy of the defect supercell  
 - $E_\text{tot}^\text{bulk}$ is the total energy of the pristine bulk  
-- $n_i$ is the number of atoms added or removed  
+- $\Delta n_i$ is the number of atoms of species $i$ added or removed  
 - $\mu_i^{eff}$ is the chemical potential of species $i$, defined as: $\mu_i^{eff}=\mu_i^{bulk}+\Delta \mu_i$
 	- $\mu_i^{\mathrm{bulk}}$ is the bulk reservoir energy per atom of species $i$
 	- $\Delta \mu_i$ is the relative chemical potential of species $i$ (e.g., Ga-rich)
@@ -36,12 +35,12 @@ The BDA assumes the following directory structure:
 ```
     <project_name>
      │
-     ├ bulk_supercell/ ──
-     │                 ├─ OUTCAR
-     │                 ├─ LOCPOT
+     ├ bulk/ ──
+     │        ├─ POSCAR
+     │        ├─ OUTCAR
+     │        ├─ LOCPOT
      │
      └ defects/ ── 
-                ├─ POSCAR (Bulk)
                 ├─ energies_final_vAtoms_plots.py
                 ├─ formation_vs_fermi.py
                 ├─ make_vAtoms_output.sh
@@ -218,7 +217,7 @@ python energies_final_vAtoms_plots.py -mu -2.91250895 -8.31707533 -percent 0.85 
 
 `energies_final_vAtoms_plots.py` produces `energies_final.csv` with the following format:
 ```
-Defect Name,Charge,Bulk Energy,Correction Energy,Delta V,Std Deviation 
+Defect Name, Charge, Bulk Energy, Correction Energy, Delta V, Std Deviation 
 bulk,0.0,-779.26382452,0.0,0.0,0.0  
 Va_Ga,0.0,-769.12439871,0.0,-0.1134629125,0.008629802275897968  
 Va_Ga,-1.0,-766.05547513,0.1844,-0.10367685625,0.014714400975998342  
@@ -242,7 +241,7 @@ The program saves all ΔV plots in the `vAtomsImages` folder. These plots should
 # Step 2. Plotting
 Plotting the formation energy vs the fermi energy is a good way to qualitatively interpret which defects are most likely to be present when the material has a particular fermi energy. The `formation_vs_fermi.py` program will create these plots using files previously created in the tutorial. 
 ## Relative Chemical Potential Input ($\Delta \mu$)
-The chemical potentials used in the formation energy calculations are provided through a `.yaml` file, which defines the environment (e.g., Ga-rich or N-rich). Each file must contain only a single chemical potential condition, as the current implementation does not support multiple environments within one file. When comparing different growth limits, separate YAML files must therefore be created for each condition.
+The chemical potentials used in the formation energy calculations are provided through a `.yaml` file, which defines the environment (e.g., Ga-rich or N-rich). Each file must contain only a single chemical potential condition. When comparing different growth limits, separate YAML files must therefore be created for each condition.
 
 We recommend using the naming convention `target_vertices_<Element>_Rich.yaml`, where `<Element>` indicates the species in excess under the chosen growth condition. For example, `target_vertices_Ga_Rich.yaml` corresponds to Ga-rich conditions, while `target_vertices_N_Rich.yaml` corresponds to N-rich conditions. The default file name used by the code is `target_vertices.yaml`, which is intended only for single-condition workflows and is not recommended for systematic comparisons across multiple environments.
 
@@ -254,10 +253,11 @@ A:
         Ga: 0.0
         N: -1.31365
 ```
-
+**Note:** The bulk reservoir energies per atom ($\mu$) are input by the user and must be input in the same order as the YAML file.
 ### Program Arguments  
 -   `-plotsingledefect`: Generate individual plots for each defect (default: `False`)
--   `-poscar`: Path to the POSCAR file (default: `./POSCAR`)
+- `-poscar`: Path to the defect POSCAR file (default: `./POSCAR`)  
+-  `-bulkposcar`: Path to the bulk POSCAR file (default: `../bulk/POSCAR`)  
 -   `-correction`: Path to the final correction energies file (default: `./energies_final.csv`)
 -   `-chempot`: Path to the chemical potential YAML file (default: `./target_vertices.yaml`)
 -   `-ymax`: Maximum y-axis value for defect formation energy plot (default: `7`)
@@ -273,7 +273,7 @@ A:
 -   `--save_as`: Output filename prefix for generated plots (default: `combinedDefects`)
 -   `-bg`: Band gap energy in eV (required)
 -   `-vbm`: Valence band maximum offset in eV (required)
--   `-mu`: Bulk reservoir energies per atom in POSCAR order (required)
+-   `-mu`: Bulk reservoir energies per atom in `target_vertices.yaml` order (required)
 
 
 ## Example Usage  
@@ -287,7 +287,7 @@ python formation_vs_fermi.py -mu -2.91250895 -8.31707533 -bg 1.7378 -vbm 3.4099 
 
 The program prints key defect information to the terminal, including:
 
-- Element names in POSCAR order  
+- Element names in `target_verticies` order  
 - User-defined chemical potentials (`μ`)  
 - Chemical potential shifts (`Δμ`) from the YAML file  
 - Effective chemical potentials (`μ_eff`)  
@@ -315,10 +315,11 @@ Transition from -2 to -3 at 2.86770 eV
 
 Intrinisc Fermi Defect Level: 0.8213 eV
 ````
-The program will also store the plots with all defects pictured in a directory named `chardedDefectPlots`. Here is an example of one such plot:
-<img src="images/GaRich_HSE_PBE.png" alt="" width="600">
+The program will also store the plots with all defects pictured in a directory named `chargeDefectPlots`. Here is an example of one such plot:
+<img src="images/..." alt="" width="600">
 
-Lastly, if the `plotsingledefect` arguement is set to true, it will plot each defect alone and name the file with the defect name. They can be found in the same directory. 
+Lastly, the program will store the plots with a singular defect in a directory named `singleDefects` inside the `chargeDefectPlots` directory. Optionally, the defects can be plotted individually. They will appear in this directory as a png file with the defect name. Here are examples of plots containing an individual defect and multiple defects:
+<img src="images/..." alt="" width="600">
 # References
 [1] Yu Kumagai, Naoki Tsunoda, Akira Takahashi, and Fumiyasu Oba. Insights into oxygen vacancies from high-throughput first-principles calculations. *Phys. Rev. Materials*, 5:123803, 2021.  
 [2] Zachery Willard. GitHub profile. https://github.com/zacherywillard, Accessed March 2026.  
@@ -326,4 +327,4 @@ Lastly, if the `plotsingledefect` arguement is set to true, it will plot each de
 [4] G. Kresse and J. Furthmüller. Efficient iterative schemes for ab initio total energy calculations using a plane-wave basis set. *Phys. Rev. B*, 54:11169–11186, 1996.  
 [5] Christoph Freysoldt. Manual for sxdefectalign, version 3.0. Technical report, *MPI Fritz Haber Institute*, August 2022.  
 [6] John L. Lyons and Chris G. Van de Walle. Computationally predicted energies and properties of defects in GaN. *npj Computational Materials*, 3:12, 2017.  
-[7] Nubhav Jain, Shyue Ping Ong, Geoffroy Hautier, Wei Chen, William Davidson Richards, Stephen Dacek, Shreyas Cholia, Dan Gunter, David Skinner, Gerbrand Ceder, and Kristin A. Persson. The Materials Project: A materials genome approach to accelerating materials innovation. *APL Materials*, 1(1):011002, 2013.
+[7] Nubhav Jain, Shyue Ping Ong, Geoffroy Hautier, Wei Chen, William Davidson Richards, Stephen Dacek, Shreyas Cholia, Dan Gunter, David Skinner, Gerbrand Ceder, and Kristin A. Persson. The Materials Project: A materials genome approach to accelerating materials innovation. *APL Materials*, 1(1):011002, 2013
