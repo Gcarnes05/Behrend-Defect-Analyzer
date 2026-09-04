@@ -4,8 +4,8 @@ Created on Fri Jun  7 13:15:19 2024
 @author: evanp
 Updated: April 2026 (Gcarnes05)
 ========================================================================================
-Input: target_vertices.yaml, energies_correction.csv
-Output: Charge Defect Plot with all defects at all specified points in .yaml file -- Optional: Single defect plots
+INPUT: target_vertices.yaml, energies_correction.csv
+OUTPUT: Charge Defect Plot with all defects at all specified points in .yaml file -- Optional: Single defect plots
 ========================================================================================
 """
 
@@ -17,79 +17,260 @@ import yaml
 import argparse
 import math
 
-
-# Create output directory if it does not exist
 def create_output_folder(folder_name: str):
     if not os.path.exists(folder_name):
         os.mkdir(folder_name)
 
 
-# Read chemical potentials from YAML configuration file
+# Chemical potentials
 def read_chemical_potentials(yaml_path: str):
+
     with open(yaml_path, "r") as file:
         data = yaml.safe_load(file)
 
     if not isinstance(data, dict):
-        raise ValueError("YAML file is not properly formatted")
+        raise ValueError("target_vertices.yaml must contain a YAML dictionary.")
 
+    phases = []
+    phase_data = []
+
+    # Find every top level phase containing a chem_pot dictionary
+    for phase_name, phase_contents in data.items():
+
+        if not isinstance(phase_contents, dict):
+            continue
+
+        if "chem_pot" not in phase_contents:
+            continue
+
+        chem_pot_block = phase_contents["chem_pot"]
+
+        if not isinstance(chem_pot_block, dict):
+            raise ValueError(
+                f"Phase '{phase_name}' has an invalid chem_pot section."
+            )
+
+        phases.append(phase_name)
+        phase_data.append(chem_pot_block)
+
+    if len(phases) == 0:
+        raise ValueError("No chemical potential phases were found in target_vertices.yaml.")
+
+    # Determine all unique elements
     elements = []
+
+    for chem_pot_block in phase_data:
+
+        for element in chem_pot_block:
+
+            if element not in elements:
+                elements.append(element)
+
+    if len(elements) == 0:
+        raise ValueError("No elements were found in the chem_pot sections.")
+
+    # Make sure every phase contains every element
+    for phase_name, chem_pot_block in zip(
+        phases,
+        phase_data
+    ):
+
+        missing = [
+            element
+            for element in elements
+            if element not in chem_pot_block
+        ]
+
+        if missing:
+            raise ValueError(
+                f"Phase '{phase_name}' is missing chemical potentials "
+                f"for: {', '.join(missing)}"
+            )
+
+    # Arrange chemical potentials in a predictable order
     chem_pot = []
 
-    counter1 = 0
-    counter2 = 0
+    for chem_pot_block in phase_data:
 
-    # Parse nested YAML structure
-    for x in data:
-        if counter1 > 0:
-            for y in data[x]:
-                if counter2 < 1:
-                    for z in data[x][y]:
-                        elements.append(z)
-                        chem_pot.append(data[x][y][z])
-                counter2 += 1
-        counter1 += 1
-        counter2 = 0
+        for element in elements:
 
-    if len(elements) == 0 or len(chem_pot) == 0:
-        raise ValueError("No chemical potentials found in YAML file")
+            chem_pot.append(
+                float(chem_pot_block[element])
+            )
 
-    return elements, chem_pot
+    print(f"Chemical potential values: {len(chem_pot)}")
+
+    return phases, elements, chem_pot
 
 
-# Read POSCAR
+# POSCAR reader
 def read_poscar(poscar_path: str):
+    """
+    Read element names and atom counts from a VASP POSCAR.
+    """
+
     with open(poscar_path, "r") as f:
         poscar_lines = f.readlines()
 
+    if len(poscar_lines) < 7:
+        raise ValueError(
+            f"POSCAR appears to be incomplete: {poscar_path}"
+        )
+
     element_names = poscar_lines[5].split()
-    defect_sites = [int(x) for x in poscar_lines[6].split()]
 
-    factor = math.gcd(*defect_sites)
-    defect_sites = [x / factor for x in defect_sites]
+    try:
+        atom_counts = [int(x) for x in poscar_lines[6].split()]
+    except ValueError:
+        raise ValueError(
+            f"Could not read atom counts from POSCAR: {poscar_path}"
+        )
 
-    return element_names, defect_sites, factor
+    if len(element_names) != len(atom_counts):
+        raise ValueError(
+            f"Number of elements does not match number of atom counts "
+            f"in {poscar_path}"
+        )
+
+    return element_names, atom_counts
+
+
+# Composition comparison
+def compare_compositions(bulk_elements, bulk_counts, defect_elements, defect_counts):
+
+    bulk_composition = dict(zip(bulk_elements, bulk_counts))
+    defect_composition = dict(zip(defect_elements, defect_counts))
+
+    all_elements = sorted(
+        set(bulk_composition.keys()) |
+        set(defect_composition.keys())
+    )
+
+    delta_N = {}
+
+    for element in all_elements:
+
+        bulk_count = bulk_composition.get(element, 0)
+        defect_count = defect_composition.get(element, 0)
+
+        delta_N[element] = defect_count - bulk_count
+
+    return delta_N
     
-# Function to format labels for plotting with subscript
+
+# get chem pots
+def get_effective_chemical_potentials(elements, chem_pot, reference_elements, reference_mu, phase_index, num_phases):
+ 
+    effective_mu = {}
+
+    for i, element in enumerate(elements):
+
+        # Chemical potential from YAML
+        delta_mu = float(
+            chem_pot[phase_index * len(elements) + i]
+        )
+
+        # Find elemental reference energy
+        if element not in reference_elements:
+            raise ValueError(
+                f"No elemental reference energy was supplied for "
+                f"{element}. Add it to -mu."
+            )
+
+        reference_index = reference_elements.index(element)
+
+        reference_energy = float(
+            reference_mu[reference_index]
+        )
+
+        effective_mu[element] = (
+            reference_energy + delta_mu
+        )
+
+    return effective_mu
+
+
+# Print composition information
+def print_composition_information(bulk_elements, bulk_counts, defect_elements, defect_counts, delta_N):
+    print("\nBulk POSCAR composition:")
+    for element, count in zip(bulk_elements, bulk_counts):
+        print(f"    {element:<5} {count}")
+
+    print("\nDefect POSCAR composition:")
+    for element, count in zip(defect_elements, defect_counts):
+        print(f"    {element:<5} {count}")
+
+    print("\nPOSCAR Composition change:")
+    for element, change in delta_N.items():
+
+        if change > 0:
+            sign = "+"
+        else:
+            sign = ""
+
+        print(f"    {element:<5} {sign}{change}")
+
+    print()
+
+
+# Determine degeneracy
+def determine_degeneracy(bulk_elements, bulk_counts, delta_N):
+
+    bulk_composition = dict(zip(bulk_elements, bulk_counts))
+
+    # Automatically select an element that was removed
+    removed_elements = [
+        element
+        for element, change in delta_N.items()
+        if change < 0
+    ]
+
+    if len(removed_elements) == 1:
+
+        element = removed_elements[0]
+
+        if element in bulk_composition:
+            return bulk_composition[element]
+
+    # If no unique removed element exists, fall back to one defect
+    return 1
+
+
+# Format labels
 def format_label(label):
-    base, subscript = label.split('_')
-    return f"{base}$_{{{subscript}}}$"
+
+    # Handle arbitrary names without underscores
+    if "_" not in label:
+        return label
+
+    parts = label.split("_")
+
+    if len(parts) == 2:
+        return f"{parts[0]}$_{{{parts[1]}}}$"
+
+    # For names such as Va_Si_N or Va_Si_O
+    formatted = parts[0]
+
+    for part in parts[1:]:
+        formatted += f"$_{{{part}}}$"
+
+    return formatted
 
 
-# Validate energies final file
+# Validate energies_final.csv
 def validate_energies_final(df: pd.DataFrame):
-    required_columns = ["Defect Name"," Charge"," Bulk Energy"," Correction Energy"," Delta V"," Std Deviation"]
 
-    # Column check
+    required_columns = ["Defect Name", " Charge", " Bulk Energy", " Correction Energy", " Delta V", " Std Deviation"]
+
     for col in required_columns:
         if col not in df.columns:
             raise ValueError(f"energies_final.csv missing required column: '{col}'")
 
-    # NaN check
     if df[required_columns].isnull().any().any():
         raise ValueError("energies_final.csv contains NaN values")
 
-    # Bulk row checks
     first = df.iloc[0]
+
     if first["Defect Name"].lower() != "bulk":
         raise ValueError("First row must be the bulk reference ('bulk')")
 
@@ -99,129 +280,166 @@ def validate_energies_final(df: pd.DataFrame):
     if abs(first[" Correction Energy"]) > 1e-6:
         raise ValueError("Bulk correction energy must be 0")
 
-    # Defect naming
-    for i, name in enumerate(df["Defect Name"][1:], start=2):
-        if "_" not in name:
-            raise ValueError(f"Invalid defect name format at row {i}: '{name}'")
-
-    # Charge must be integer
     for i, q in enumerate(df[" Charge"][1:], start=2):
+
         if not float(q).is_integer():
             raise ValueError(f"Non-integer charge at row {i}: {q}")
 
-    # Duplicate (defect, charge) check
     duplicates = df[["Defect Name", " Charge"]].duplicated()
+
     if duplicates.any():
+
         dup_rows = np.where(duplicates)[0] + 2
-        raise ValueError(f"Duplicate defect/charge entries at rows {dup_rows}")
+
+        raise ValueError(
+            f"Duplicate defect/charge entries at rows {dup_rows}"
+        )
 
     print("energies_final.csv validation passed")
     print()
 
 
+# Main
 def main():
-    # Argument parsing
-    parser = argparse.ArgumentParser(description="Arguments for charge defect ", formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument("-plotsingledefect", nargs='?', type=bool, default = False, help="Generates individual formation energy vs Fermi energy plots for each defect")
-    parser.add_argument("-poscar", nargs='?', default = "./POSCAR", help="poscar file location, POSCAR is used to determine number of defect sites so use a version that includes all defects you are looking at")
-    parser.add_argument("-correction", nargs='?', default = "./energies_final.csv", help="final correction energies and defect names file location")
-    parser.add_argument("-chempot", nargs='?', default = "./target_vertices.yaml", help="chemical potential file location (.yaml)")
-    parser.add_argument("-ymax", nargs='?', type=float, default = 7, help="ymax for defect graph")
-    parser.add_argument("-xmax", nargs='?', type=float, default = -3, help="xmax for defect graph")
-    parser.add_argument("-ymin", nargs='?', type=float, default = -7, help="ymin for defect graph")
-    parser.add_argument("-xmin", nargs='?', type=float, default = 0, help="xmin for defect graph")
-    parser.add_argument("-testfe", nargs='?', type=float, default = -1, help="displayes Q information and defect information at specified fermi energy")
-    parser.add_argument("-kT", nargs='?', type=float, default = 0.05, help="kT value")
-    parser.add_argument("-printQ", nargs='?', type=bool, default = False, help="prints Q values of all defects at intrinsic fermi level")
-    parser.add_argument("-colors", nargs='+', default=["red", "green", "blue", "orange"], help="color array for charge neutrality plot")
-    parser.add_argument("-legloc", nargs='?', default = 8, help="sets the location of the legend in charge neutrality plot")
-    parser.add_argument("-hse", nargs=2, type=float, help="enter in values for band gap and VBM for HSE calculation to generate PBE 'prediction'")
-    parser.add_argument("--save_as", nargs="?", default="combinedDefects", help="Custom filename (without extension) for the saved formation energy (charge neutrality) plot")
-    parser.add_argument("-bg", type=float, required=True, help="Band Gap")
-    parser.add_argument("-vbm", type=float, required=True, help="VBM Offset")
-    parser.add_argument("-mu", nargs="+", type=float, required=True, help="Per-atom bulk energies for each element in POSCAR order")
+
+    parser = argparse.ArgumentParser(description="Charge defect formation-energy plotter", formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+
+    parser.add_argument("-plotsingledefect", nargs="?", type=bool, default=False, help="Generates individual formation energy vs Fermi energy plots for each defect")
+    parser.add_argument("-poscar", nargs="?", default="./POSCAR", help="Path to defect POSCAR")
+    parser.add_argument("-bulkposcar", nargs="?", default="../bulk/POSCAR", help="Path to perfect/bulk POSCAR")
+    parser.add_argument("-correction", nargs="?", default="./energies_final.csv", help="Final correction energies file location")
+    parser.add_argument("-chempot", nargs="?", default="./target_vertices.yaml", help="Desired chemical potential file location (.yaml)")
+    parser.add_argument("-ymax", nargs="?", type=float, default=7, help="ymax for defect graph")
+    parser.add_argument("-xmax", nargs="?", type=float, default=-3, help="xmax for defect graph")
+    parser.add_argument("-ymin", nargs="?", type=float, default=-7, help="ymin for defect graph")
+    parser.add_argument("-xmin", nargs="?", type=float, default=0, help="xmin for defect graph")
+    parser.add_argument("-testfe", nargs="?", type=float, default=-1, help="Displays Q information and defect information at specified fermi energy")
+    parser.add_argument("-kT", nargs="?", type=float, default=0.05, help="kT value")
+    parser.add_argument("-printQ", nargs="?", type=bool, default=False, help="Prints Q values of all defects at intrinsic fermi level")
+    parser.add_argument("-colors", nargs="+", default=["red", "green", "blue", "orange"], help="Color array for charge neutrality plot")
+    parser.add_argument("-legloc", nargs="?", default=8, help="Sets the location of the legend in charge neutrality plot")
+    parser.add_argument("-hse", nargs=2, type=float, help="HSE band gap and VBM")
+    parser.add_argument("--save_as", nargs="?", default="combinedDefects", help="Custom filename (without extension) for the saved formation energy plot")
+    parser.add_argument("-bg", type=float, required=True, help="Band gap")
+    parser.add_argument("-vbm", type=float, required=True, help="VBM offset")
+    parser.add_argument("-mu", nargs="+", type=float, required=True, help="Per-atom bulk energies corresponding to the elements, in target_verticies order.")
     args = parser.parse_args()
     config = vars(args)
-    
-    # Validate input files exist
-    for path_key in ["poscar", "correction", "chempot"]:
+
+    # Validate files
+    for path_key in ["poscar","bulkposcar","correction","chempot"]:
+
         if not os.path.exists(config[path_key]):
+
             raise FileNotFoundError(f"Input file not found: {config[path_key]}")
 
-    #Declaration of arrays for charge neutrality plot
-    graphValues = [] #Values stored for plot, used as a temp to analyze lowest energy charge state
-    minCharge = [] #Array that stores the minimum charge at given "fermi energy"
-    fermiEnergies = [] #Array that contains "x" values, based on the number of steps set above
-
-    # Defaults and Setup
-    if config["xmax"] == -3:
-        config["xmax"] = config["bg"]
-
+    # Setup
     save_folder = "chargeDefectPlots"
     create_output_folder(save_folder)
-    
-    # Read Input Files
+
+    if config["plotsingledefect"]:
+        single_defect_folder = os.path.join(save_folder, "singleDefects")
+        create_output_folder(single_defect_folder)
+
     energies_final = pd.read_csv(config["correction"])
+
+    phases, elements, chem_pot = read_chemical_potentials(config["chempot"])
+
+    numOfElements = len(elements)
+    numPhases = len(phases)
+
+    if len(chem_pot) != numPhases * numOfElements:
+        raise ValueError(
+            "Chemical potential data does not contain exactly one "
+            "chemical potential for every element in every phase."
+        )
+
     
-    elements, chem_pot = read_chemical_potentials(config["chempot"])
-    element_names, defect_sites, factor = read_poscar(config["poscar"])
-
-    mu = config["mu"]
-
-    # Validate energies final
-    validate_energies_final(energies_final)
+    # Read BULK and DEFECT POSCARs    
+    bulk_elements, bulk_counts = read_poscar(config["bulkposcar"])
+    
+    defect_elements, defect_counts = read_poscar(config["poscar"])
+    
+    # Determine all unique elements in the system    
+    all_elements = list(dict.fromkeys(bulk_elements + defect_elements))
+    
+    numOfElements = len(all_elements)
+    
+    print(f"Number of unique elements: {numOfElements}")
+    print(f"Elements: {', '.join(all_elements)}")
+    
+    # Determine composition change    
+    delta_N = compare_compositions(bulk_elements, bulk_counts, defect_elements, defect_counts)
+    
+    print_composition_information(bulk_elements, bulk_counts, defect_elements, defect_counts, delta_N)
 
     # Validate chemical potentials
-    if len(mu) != len(element_names):
-        raise ValueError("Number of chemical potentials must match POSCAR elements")
+    mu = config["mu"]
     
-    # Validate numeric arguments
+    if len(mu) == 0:
+        raise ValueError("At least one elemental reference energy must be supplied.")
+    
+    if len(mu) != len(elements):
+        raise ValueError(
+            "Number of elemental reference energies supplied with -mu "
+            "must match the number of elements in target_vertices.yaml."
+        )
+
+    # Determine degeneracy
+    degeneracy = determine_degeneracy(bulk_elements, bulk_counts, delta_N)
+
+    # Validate energies file
+    validate_energies_final(energies_final)
+
+    # Validate numerical arguments
     if config["bg"] <= 0:
-        raise ValueError("Band gap (-bg) must be positive")
+        raise ValueError("Band gap must be positive")
 
     if config["kT"] <= 0:
         raise ValueError("kT must be positive")
 
-    if config["xmin"] >= config["xmax"]:
+    if config["xmin"] >= config["xmax"] and config["xmax"] != -3:
         raise ValueError("xmin must be less than xmax")
 
     if config["ymin"] >= config["ymax"]:
         raise ValueError("ymin must be less than ymax")
 
-    if config["testfe"] != -1 and (config["testfe"] < config["xmin"] or config["testfe"] > config["xmax"]):
-        print("Warning: testfe is outside plotting range")
-    
+    # Band structure information
+    E_f = config["vbm"]
+    gap = config["bg"]
 
-    E_f = config['vbm'] # Fermi Energy (eV)
-    gap = config['bg'] # Band Gap (eV)
+    if config["xmax"] == -3:
+        config["xmax"] = gap
 
-    #This determines if the hse tag was set to T/F and adjusts calues accordingly
-    if(config["hse"] != None):
+    if config["hse"] is not None:
+
         originalVBM = E_f
         originalGap = gap
-        
+
         E_f = config["hse"][1]
         gap = config["hse"][0]
-        
-        config['xmax'] = gap
 
+        config["xmax"] = gap
+
+    # Fermi-energy grid
     stepSize = 0.0001
 
-    # Calculate and validate iterations
     iterations = gap / stepSize
+
     if iterations <= 0:
-        raise ValueError("Invalid iteration count (check band gap and step size)")
+        raise ValueError("Invalid iteration count")
 
-    # Generates all Fermi Energies for Plot
-    fermiEnergies = [stepSize * i for i in range(int(iterations))]
+    fermiEnergies = [
+        stepSize * i
+        for i in range(int(iterations))]
 
-    # Define and validate colors
+    # Plot setup
     colors = config["colors"]
+
     if len(colors) == 0:
         raise ValueError("At least one color must be provided")
-    
-    # Plot styling setup
-    lineStyles = ["solid", (0, (5, 7)), "dotted", "dashdot", "dashed"]
+
+    lineStyles = ["solid",(0, (5, 7)),"dotted","dashdot","dashed"]
 
     ylimmax = config["ymax"]
     ylimmin = config["ymin"]
@@ -230,371 +448,351 @@ def main():
 
     bulkEnergy = float(energies_final.iloc[0, 2])
 
-    count = 0
-    
-    # Gets the name of the first defect for plots
-    storedName = energies_final.iloc[1,0]
+    # Determine which defects are present in energies_final.csv
+    defect_names = list(energies_final["Defect Name"].iloc[1:].unique())
 
-    # Variable for determining number of spots
-    oldElement = " " 
+    if len(defect_names) == 0:
+        raise ValueError("No defects found in energies_final.csv")
 
-    #Declartion of variables/arrays for charge neutrality plot
-    numOfElements = 0 #Counts the number of "unique" elements
-    tempArray = [] #Used to calculate number of elements
-    tempValue = 0 #Used to calculate number of elements
-    allValues = [] #Stores all of the defect formation energies calculated below at each fermi level
-    allCharges = [] #Stores the charge state for each fermi level and defect
-    colorName = [] #Used to keep color coding for the plot
-    degenArray = [] #Array that stores the number of degeneracy states in supercell/primitive cell
-    finalColorNames = [] #Used to keep color coding for the plot
+    print("Defect found in energies_final.csv:")
 
-    #Determing the number of unique elements
-    for i in range (0,len(elements)):
-        for j in range (0, len(tempArray)):
-            if(tempArray[j] == elements[i]):
-                tempValue = tempValue + 1
-        if (tempValue == 0):
-            tempArray.append(elements[i])
-    numOfElements = len(tempArray)
-    del (i, j, tempArray, tempValue)
+    for defect in defect_names:
+        print(f"    {defect}")
 
-    #Large for loop that will calculate charge neutrality of system based on given chemical potential points given in .yaml file
-    for p in range(0, int(len(elements)/numOfElements)):
-        oldIndex = 0 #Used to determine when charge state switches accross fermi levels
-        elementNames = []
-        elementEPA = [] #Stores energy needed to add/subtract specific atom from defect
+    print()
+
+    # Arrays used by plotting / charge neutrality
+    allValues = []
+    allCharges = []
+
+    completeGraph = []
+    completeMinCharge = []
+
+    namesArray = []
+    defectSpots = []
+
+    colorName = []
+    finalColorNames = []
+
+    for p, phase_name in enumerate(phases):
+
+        for defect_name in defect_names:
+
+            defect_rows = energies_final[
+                energies_final["Defect Name"] == defect_name
+            ]
+
+            if len(defect_rows) == 0:
+                continue
+
+            effective_mu = get_effective_chemical_potentials(elements=elements, chem_pot=chem_pot, reference_elements=elements, reference_mu=mu, phase_index=p, num_phases=numPhases)
         
-        lineStyleCount = [] #Used to ensure that all of the same color lines gave different line styles
-        for i in range (0, len(colors)):
-            lineStyleCount.append(0)
-        
-        for j in range(0, numOfElements):
-            elementNames.append(str(elements[numOfElements*p + j]))
-            elementEPA.append(float(chem_pot[numOfElements*p + j]) + mu[j])
-        
-        print(f"{'Elements:':<15} {elementNames}")
-        print(f"{'mu:':<15} {[f'{x:.4f}' for x in mu]}")
-        print(f"{'Delta mu:':<15} {[f'{chem_pot[numOfElements*p + j]:.4f}' for j in range(numOfElements)]}")
-        print(f"{'Effective mu:':<15} {[f'{x:.4f}' for x in elementEPA]}")
-        print(f"Defect Formation Energies at VBM ({E_f:.4f}) in eV:")
+            chemical_potential_term = 0.0
+            
+            for element, change in delta_N.items():
+            
+                if change == 0:
+                    continue
+            
+                if element not in effective_mu:
+                    raise ValueError(f"No chemical potential found for element {element}.")
+            
+                chemical_potential_term -= (change * effective_mu[element])
+            
+            print("Effective chemical potentials:")
+            
+            for element in sorted(effective_mu):
+                print(f"    {element:<5} "f"{effective_mu[element]:.6f} eV")
+            
+            print("Chemical potential terms:")
 
-        #Declaration of arrays for charge neutrality plot
-        completeGraph = [] #Stores defect energies for all of the defects across the fermi energies
-        namesArray = [] #Stores the names of the defects
-        completeMinCharge = [] #Stores minimum charge state for all of the defects across the fermi energies
-        defectSpots = [] #Number of locations for a specific defect 
-        
-        for i in range (1, len(energies_final)):
-            bulkDefectEnergy = float(energies_final.iloc[i,2])
-            
-            defectName = energies_final.iloc[i,0]
-            if "_" not in defectName:
-                raise ValueError(f"Invalid defect name format: {defectName}")
-            
-            j = 0
-            firstElement = "" #stores the name of the first/added "element" in defect
-            secondElement = "" #stores the name of the second/removed "second" in defect
-            
-            # Gets the name of the first/added element
-            while(defectName[j] != "_"):
-                firstElement = firstElement + defectName[j]
-                j = j + 1
-                
-            j = j + 1
-            
-            # Gets the name of the second/removed element
-            while(j != len(defectName)):
-                secondElement = secondElement + defectName[j]
-                j = j + 1
-                
-            if(oldElement == " "):
-                oldElement = secondElement
-            
-            finalDefectEnergy = bulkDefectEnergy - bulkEnergy 
-            
-            # Calculates the defect energy at specific charge state
-            for k in range(0, len(elementNames)):
-                # Subtract Energy From "Added" Element
-                if(firstElement == elementNames[k]):
-                    finalDefectEnergy = finalDefectEnergy - elementEPA[k]
-                
-                # Add Energy From "Subtracted" Element
-                if(secondElement == elementNames[k]):
-                    finalDefectEnergy = finalDefectEnergy + elementEPA[k]
-            q = int(energies_final.iloc[i, 1])
-            V = float(energies_final.iloc[i, 4])
-            correction = float(energies_final.iloc[i, 3])
-            
-            if(storedName != defectName and i != 1):
-                #Temp Array Declarations all needed for the charge neutrality plot
-                tempArray = [] #Temp for charge states
-                tempChargeArray = [] #Temp for charge states
-                forGraph = [] #Temp for defect energies, merges tempArray
-                forCharge = [] #Temp for charge states, merges tempChargeArray
-                
-                qw = 0 #used as a temp to determine color for plot
-                feColor = "" #used as a temp to determine color for plot
-                while(storedName[qw] != "_"):
-                    feColor = feColor + storedName[qw]
-                    qw += 1
-                    
-                colorName.append(feColor)
-                
-                if(len(finalColorNames) == 0):
-                    finalColorNames.append(feColor)
-                
-                for bb in range (0, len(finalColorNames)):
-                    if(feColor == finalColorNames[bb]):
-                        break
-                    elif(bb == len(finalColorNames) - 1):
-                        finalColorNames.append(feColor)
-                
-                del(feColor, qw)
-                
-                for n in range (0, len(graphValues)):
-                    allValues.append(graphValues[n])
-                    allCharges.append(minCharge[n])
-                
-                if count == 0:
-                    raise ValueError("No charge states found for defect, check input data")
-                
-                # Appends minimum defect energy at each fermi energy
-                for m in range (0, int(len(graphValues)/count)):
-                    for n in range (0, count):
-                        tempArray.append(graphValues[m + int(len(graphValues)/count)*n])
-                        tempChargeArray.append(minCharge  [m + int(len(minCharge)/count)*n])
-                    forGraph.append(min(tempArray))
-                    
-                            
-                    newIndex = tempArray.index(min(tempArray))
-                    
-                    forCharge.append(tempChargeArray[newIndex])
-                    defectSpots.append(oldElement)
-                        
-                    if (newIndex != oldIndex):
-                        oldIndex = newIndex
-                        if(m != 0):
-                            print("Transition from", forCharge[m - 1], "to", forCharge[m], "at", round(fermiEnergies[m], 5), "eV")
-                                                    
-                    completeGraph.append(forGraph[m])
-                    completeMinCharge.append(forCharge[m])
-                    tempArray = []
-                    tempChargeArray = []
-                    
-                #Plots the individual charge defect plots, contains all of the charge states for an individual defect spanned across entire band gap
-                if(config["plotsingledefect"] == True): 
-                    formattedTitle = format_label(str(storedName))
-                    plt.figure(figsize=(10,6))
-                    plt.title("Defect Plot of " + formattedTitle)
-                    plt.xlabel("Fermi Energy (eV)")
-                    plt.ylabel("Formation Energy (eV)")
-                    plt.plot(fermiEnergies, forGraph)
-                    plt.xlim(xlimmin, xlimmax)
-                    plt.ylim(ylimmin, ylimmax)
-                    saveLocation = save_folder + "/" + str(storedName) + ".png"
-                    plt.savefig(saveLocation)
-                    plt.show()
-                
-                namesArray.append(storedName)
-                storedName = defectName
-                oldElement = secondElement
-                
-                # Clear Graph Values
-                graphValues = []
-                minCharge = []
-                count = 0
-            
-            # Account for Charge Defect and Correction Values
-            finalDefectEnergy = finalDefectEnergy + q*(E_f + V) + correction
-            energy = '{:<12}  {:>6}'.format(defectName + "_" + str(q), str(round(finalDefectEnergy,5)))
-            print(energy)
+            for element, change in delta_N.items():
 
-            # Everything Below is for plotting defect energy vs fermi energy
-            for k in range(0, int(iterations)):
-                graphValues.append(finalDefectEnergy + q*stepSize*k) # Adds the total fermi energy multiplied by charge
-                minCharge.append(q)
-            
-            count = count + 1
+                if change == 0:
+                    continue
 
-        # Erases temporary data for last graph
-        tempArray = [] 
-        forGraph = []
-        forCharge = []
-        tempChargeArray = []
+                term = -change * effective_mu[element]
 
-        #Everything below repeats above for the last defect, until noted
-        qw = 0
-        feColor = ""
-        while(storedName[qw] != "_"):
-            feColor = feColor + storedName[qw]
-            qw += 1
-            
-        colorName.append(feColor)
-        
-        if(len(finalColorNames) == 0):
-            finalColorNames.append(feColor)
-        
-        for bb in range (0, len(finalColorNames)):
-            if(feColor == finalColorNames[bb]):
-                break
-            elif(bb == len(finalColorNames) - 1):
-                finalColorNames.append(feColor)
-        
-        del(feColor, qw)
-        
-        for n in range (0, len(graphValues)):
-            allValues.append(graphValues[n])
-            allCharges.append(minCharge[n])
-        
-        for m in range (0, int(len(graphValues)/count)):
-            for n in range (0, count):
-                tempArray.append(graphValues[m + int(len(graphValues)/count)*n])
-                tempChargeArray.append(minCharge[m + int(len(minCharge)/count)*n])
-            forGraph.append(min(tempArray))
-            
-            newIndex = tempArray.index(min(tempArray))
-            
-            forCharge.append(tempChargeArray[newIndex])
-            defectSpots.append(oldElement)
-            
-            if (newIndex != oldIndex):
-                oldIndex = newIndex
-                if(m != 0):
-                    print(f"Transition from {forCharge[m - 1]:>2} to {forCharge[m]:>2} at {fermiEnergies[m]:.5f} eV")
+                print(f"    {element}: "f"Delta_N = {change:+d}, "f"mu = {effective_mu[element]:.6f}, "f"contribution = {term:.6f} eV")
 
-            completeGraph.append(forGraph[m])
-            completeMinCharge.append(forCharge[m])
-            tempArray = []
-            tempChargeArray = []
-        # This is the last of the repeated analysis
-    
-        # This plots the last individual defect
-        plt.figure(figsize=(10,6))
-        storedName = defectName
-        namesArray.append(storedName)
+            print()
 
-        if(config["plotsingledefect"] == True): 
-            formattedTitle = format_label(str(storedName))
-            plt.title("Defect Plot of " + formattedTitle)
-            plt.xlabel("Fermi Energy (eV)")
-            plt.ylabel("Formation Energy (eV)")
-            plt.plot(fermiEnergies, forGraph, label = str(q))
-            plt.xlim(xlimmin, xlimmax)
-            plt.ylim(ylimmin, ylimmax)
-            saveLocation = save_folder + "/" + str(storedName) + ".png"
-            plt.savefig(saveLocation)
-            plt.show()
+            # Charge-state formation energies
+            defect_graphs = []
+            defect_charges = []
+            print(f"Defect Formation Energies at VBM ({E_f}) in eV:")
+            for _, row in defect_rows.iterrows():
 
-        numberOfDefects = int(len(completeGraph)/len(fermiEnergies))
+                bulkDefectEnergy = float(row[" Bulk Energy"])
 
-        plt.figure(figsize=(5,7))
-        # plt.title("Charge Defect Plot")
+                q = int(row[" Charge"])
+
+                V = float(row[" Delta V"])
+
+                correction = float(row[" Correction Energy"])
+
+                # Base formation energy
+                finalDefectEnergy = (bulkDefectEnergy - bulkEnergy + chemical_potential_term)
+
+                # Charge correction
+                finalDefectEnergy += (q * (E_f + V) + correction)
+
+                print(f"{defect_name}_{q:<3} "f"{finalDefectEnergy:>12.6f} eV")
+
+                # Formation energy vs Fermi energy
+                graph = []
+
+                charges = []
+
+                for k in range(int(iterations)):
+
+                    graph.append(finalDefectEnergy + q * stepSize * k)
+
+                    charges.append(q)
+
+                defect_graphs.append(graph)
+                defect_charges.append(charges)
+
+            old_charge = None
+
+            for m in range(len(fermiEnergies)):
+
+                energies_at_fe = [defect_graphs[q][m] for q in range(len(defect_graphs))]
+
+                charges_at_fe = [defect_charges[q][m] for q in range(len(defect_charges))]
+
+                minimum_energy = min(energies_at_fe)
+
+                minimum_index = energies_at_fe.index(minimum_energy)
+
+                minimum_charge = charges_at_fe[minimum_index]
+
+                completeGraph.append(minimum_energy)
+
+                completeMinCharge.append(minimum_charge)
+
+                defectSpots.append(degeneracy)
+
+                if old_charge is not None and minimum_charge != old_charge:
+
+                    print(
+                        f"Transition from {old_charge:2d} "
+                        f"to {minimum_charge:2d} "
+                        f"at {fermiEnergies[m]:.5f} eV"
+                    )
+
+                old_charge = minimum_charge
+
+            namesArray.append(defect_name)
+
+            color_group = defect_name.split("_")[0]
+
+            colorName.append(color_group)
+
+            if color_group not in finalColorNames:
+
+                finalColorNames.append(color_group)
+
+            # Individual defect plot
+            if config["plotsingledefect"]:
+
+                plt.figure(figsize=(10, 6))
+
+                formattedTitle = format_label(str(defect_name))
+
+                plt.title("Defect Plot of " + formattedTitle)
+
+                plt.xlabel("Fermi Energy (eV)")
+
+                plt.ylabel("Formation Energy (eV)")
+
+                for graph, row in zip(defect_graphs, defect_rows.itertuples()):
+
+                    plt.plot(fermiEnergies, graph, label=f"q = {row[2]}")
+
+                plt.xlim(xlimmin, xlimmax)
+
+                plt.ylim(ylimmin, ylimmax)
+
+                plt.legend()
+
+                saveLocation = os.path.join(single_defect_folder, str(defect_name) + ".png")
+
+                plt.savefig(saveLocation)
+
+                plt.show()
+
+        # Charge neutrality calculation
+        numberOfDefects = len(defect_names)
+
+        plt.figure(figsize=(5, 7))
+
         plt.xlabel("Fermi Energy (eV)")
-        plt.ylabel("Formation Energy (eV)")
-        plt.xlim(xlimmin, xlimmax)
-        plt.ylim(ylimmin, ylimmax)
-        
-        print("")
 
-        #Below contains calculations to determine the charge neutrality of the system
-        temp1 = [] #Contains the defect energy of each defect at each fermi energy
-        temp2 = 0 #currect fermi energy being analyzed
-        temp3 = [] #Contains the minimum charge states
-        temp4 = [] #Contains the number of possible degeneracy states for the type of defect, obtained from original POSCAR
-        sign1 = False #Temps used to determine if the charge of the whole system flips
-        sign2 = False #Temps used to determine if the charge of the whole system flips
-        Q = 0 #Temps used to determine if the charge of the whole system flips
-        kT = config['kT'] #specfied boltzmann * temp value
-        e = np.exp(1) #exp value
-        qArray = [] #stores all Q values, and is used to see if charge of system changes
-        qValue = 0 #fermi energy value stored to print when sign changes
-        #Determines intrinsic fermi level of defects
-        for i in range(0, int(iterations)):
+        plt.ylabel("Formation Energy (eV)")
+
+        plt.xlim(xlimmin,xlimmax)
+
+        plt.ylim(ylimmin,ylimmax)
+
+        # Determine intrinsic Fermi level
+        kT = config["kT"]
+
+        e = np.exp(1)
+
+        qValue = None
+
+        previous_sign = None
+
+        for i, fermi_energy in enumerate(fermiEnergies):
+
+            Q = 0.0
             qArray = []
-            temp2 = float("{:0.4f}".format(fermiEnergies[i]))
-            for j in range(0, numberOfDefects):
-                temp1.append("{:0.7f}".format(completeGraph[i + j*int(iterations)]))
-                temp3.append(completeMinCharge[i + j*int(iterations)])
-                temp4.append(defectSpots[i + j*int(iterations)])
-                
-                q_i = int(temp3[j])
-                
-                for k in range(0, len(element_names)):
-                    # Subtract Energy From "Added" Element
-                    if(temp4[j] == element_names[k]):
-                        N_i = defect_sites[k]
-                                                        
-                Q = Q + N_i*q_i*(e**(-1 * float(temp1[j]) / (kT))) #Calculates total Q value at fermi energy
-                
-                if(float(config['testfe']) == float("{:0.4f}".format(fermiEnergies[i]))):
-                    print("charge state of defect", j, "=", q_i)
-                    print("degeneracy states of defect", j, "=", N_i)
-                    print("formation energy of defect", j, "=", temp1[j])
-                    print()
-            
+
+            for j in range(numberOfDefects):
+
+                index = i + j * len(fermiEnergies)
+
+                formation_energy = completeGraph[index]
+                charge = int(completeMinCharge[index])
+                N_i = defectSpots[index]
+                Q += (N_i * charge * np.exp(-formation_energy / kT))
+
+                # Store the cumulative Q after each defect
                 qArray.append(Q)
-                    
-            if(Q > 0):
-                sign1 = True
-            else:
-                sign1 = False
-            
-            if(i != 0 and sign2 != sign1):
+
+                if (
+                    config["testfe"] != -1
+                    and abs(fermi_energy - config["testfe"]) < stepSize / 2
+                ):
+                    print("charge state of defect", j, "=", charge)
+                    print("degeneracy states of defect", j, "=", N_i)
+                    print("formation energy of defect", j, "=", formation_energy)
+                    print()
+
+            current_sign = Q > 0
+
+            if previous_sign is not None and current_sign != previous_sign:
+
+                qValue = fermi_energy
+
                 print()
-                print("Intrinisc Fermi Defect Level: " + "{:0.4f}".format(temp2) + " eV")
+                print(
+                    "Intrinsic Fermi Defect Level: "
+                    f"{fermi_energy:.4f} eV"
+                )
                 print()
-                if(config['printQ']):
-                    tempQ = 0 
-                    for k in range(0, numberOfDefects):
-                        tempQ = qArray[k] - tempQ 
-                        print("Q value of defect", k, "=", tempQ)
-                    print("")
+
+                if config["printQ"]:
+
+                    tempQ = 0.0
+
+                    for j in range(numberOfDefects):
+
+                        tempQ = qArray[j] - tempQ
+                        print("Q value of defect", j, "=", tempQ)
+
+                    print()
                     print("Total Q Value =", Q)
-                    print("")
-                    del(tempQ)
-                qValue = temp2
-                        
-            if(config["testfe"] == float("{:0.4f}".format(fermiEnergies[i]))):
+                    print()
+
+            if (
+                config["testfe"] != -1
+                and abs(fermi_energy - config["testfe"]) < stepSize / 2
+            ):
                 print("Q value =", Q)
                 print()
-            
-            sign2 = sign1
-            
-            temp1 = []
-            temp3 = []
-            temp4 = []
-            Q = 0
-            
-        if(config["hse"] != None):
-            plt.fill([xlimmin, xlimmin, originalVBM - E_f, originalVBM - E_f], [ylimmin, ylimmax, ylimmax, ylimmin], color = "silver")
-            plt.fill([xlimmax, xlimmax, originalVBM - E_f + originalGap, originalVBM - E_f + originalGap], [ylimmin, ylimmax, ylimmax, ylimmin], color = "silver")
 
-        # Format the labels in namesArray
-        formatted_labels = [format_label(label) for label in namesArray]
+            previous_sign = current_sign
 
-        for i in range(0, numberOfDefects):
+        # HSE shaded regions
+        if config["hse"] is not None:
+
+            plt.fill(
+                [
+                    xlimmin,
+                    xlimmin,
+                    originalVBM - E_f,
+                    originalVBM - E_f
+                ],
+                [
+                    ylimmin,
+                    ylimmax,
+                    ylimmax,
+                    ylimmin
+                ],
+                color="silver"
+            )
+
+            plt.fill(
+                [
+                    xlimmax,
+                    xlimmax,
+                    originalVBM - E_f + originalGap,
+                    originalVBM - E_f + originalGap
+                ],
+                [
+                    ylimmin,
+                    ylimmax,
+                    ylimmax,
+                    ylimmin
+                ],
+                color="silver"
+            )
+
+        # Plot lowest energy charge state for every defect
+        lineStyleCount = [0 for _ in range(len(finalColorNames))]
+
+        for i in range(numberOfDefects):
+
             tempData = []
-            for j in range (0, int(len(fermiEnergies))):
-                tempData.append(completeGraph[i*len(fermiEnergies) + j])
-            
-            for j in range(0, len(finalColorNames)):
-                if(colorName[i] == finalColorNames[j]):
-            
-                    plt.plot(fermiEnergies, tempData, label=formatted_labels[i], color = colors[j], linestyle = lineStyles[lineStyleCount[j] % len(lineStyles)])
-                    lineStyleCount[j] = lineStyleCount[j] + 1
-        plt.axvline(qValue, color="black", linestyle="dashed")
-        colNum = math.ceil(numberOfDefects/7)
-        plt.legend(loc = config["legloc"])
+
+            start = (i * len(fermiEnergies))
+
+            end = ((i + 1)* len(fermiEnergies))
+
+            tempData = completeGraph[start:end]
+
+            color_index = finalColorNames.index(colorName[i])
+
+            plt.plot(
+                fermiEnergies,
+                tempData,
+                label=format_label(
+                    namesArray[i]
+                ),
+                color=colors[
+                    color_index % len(colors)
+                ],
+                linestyle=lineStyles[
+                    lineStyleCount[
+                        color_index
+                    ] % len(lineStyles)
+                ]
+            )
+
+            lineStyleCount[color_index] += 1
+
+        # Intrinsic Fermi level
+        if qValue is not None:
+
+            plt.axvline(
+                qValue,
+                color="black",
+                linestyle="dashed"
+            )
+
+        # Legend and save
+        plt.legend(loc=config["legloc"])
+
         plot_name = config["save_as"]
-        saveLocation = f"{save_folder}/{plot_name}.png"
+
+        saveLocation = (f"{save_folder}/{plot_name}.png")
+
         plt.savefig(saveLocation)
+
         plt.show()
-        
-        namesArray = []
-        storedName = energies_final.iloc[1,0]
-        oldElement = " "
-        
-        colorName = []
-        
+
+# Run
 if __name__ == "__main__":
     main()
