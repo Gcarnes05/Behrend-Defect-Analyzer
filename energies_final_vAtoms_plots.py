@@ -101,8 +101,8 @@ def main():
     # Argument parsing
     parser = argparse.ArgumentParser(description="Arguments for charged defect correction", formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument("-plotvatoms", nargs="?", type=str2bool, default=True)
-    parser.add_argument("-poscar", nargs="?", default="./POSCAR", help="Path to the POSCAR file (default: ./POSCAR)")
-    parser.add_argument("-defectposcar", required=True, help="Path to a defect POSCAR used to determine defect elements")
+    parser.add_argument("-poscar", nargs="?", default="./POSCAR", help="Path to defect POSCAR")
+    parser.add_argument("-bulkposcar", nargs="?", default="../bulk/POSCAR", help="Path to perfect/bulk POSCAR")
     parser.add_argument("-vatoms", nargs="?", default="./vAtoms_output.csv", help="Path to vAtoms_output.csv (default: ./vAtoms_output.csv)")
     parser.add_argument("-correction", nargs="?", default="./energies_correction.csv", help="Path to energies_correction.csv (default: ./energies_correction.csv)")
     parser.add_argument("-vatomsymax", nargs="?", type=float, default=-100, help="Maximum y-axis for vAtoms plots")
