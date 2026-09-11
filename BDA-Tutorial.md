@@ -191,9 +191,6 @@ stop
 ## Energies Final and $\Delta V$ Plots
 
 Once `energies_correction.csv` and `vAtoms_output.csv` are ready, use `energies_final_vAtoms_plots.py` to compute the potential alignment corrections (ΔV) for each defect and use them to create the energies final file. This script also calculates and adds the standard deviation of ΔV, based on the chosen set of atoms, to the energies final file. Finally, it will plot $\Delta V$ vs radial distance for each defect. 
-
-    parser.add_argument("-poscar", nargs="?", default="./POSCAR", help="Path to defect POSCAR")
-    parser.add_argument("-bulkposcar", nargs="?", default="../bulk/POSCAR", help="Path to perfect/bulk POSCAR")
   
 ### Program Arguments  
 - `-poscar`: Path to the defect POSCAR file (default: `./POSCAR`)
