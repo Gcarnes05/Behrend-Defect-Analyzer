@@ -16,6 +16,7 @@ import os
 import argparse
 import math
 
+
 # Convert command line string inputs into boolean values
 def str2bool(v):
     return str(v).lower() in ("true", "1", "yes")
@@ -25,19 +26,15 @@ def str2bool(v):
 def read_poscar(poscar_path):
     with open(poscar_path) as f:
         lines = f.readlines()
-
     elements = lines[5].split()
     sites = list(map(int, lines[6].split()))
-
     factor = math.gcd(*sites)
     sites = [s // factor for s in sites]
-
     return elements, sites
 
 
 # Compute delta V correction
 def compute_delta_v(sortedData, percent, number):
-
     last_sum = 0.0
     std_vals = []
 
@@ -45,33 +42,29 @@ def compute_delta_v(sortedData, percent, number):
     if number < 0:
         minDistance = sortedData.iloc[0, 0] * percent
         i = 0
-
         while i < len(sortedData) and sortedData.iloc[i, 0] > minDistance:
             last_sum += sortedData.iloc[i, 1]
             std_vals.append(sortedData.iloc[i, 1])
             i += 1
-
         delV = last_sum / i if i > 0 else 0.0
         cutoff_index = max(i - 1, 0)
 
     # Use fixed number of atoms when specified
     else:
-        for i in range(min(number, len(sortedData))):
+        i = 0
+        while i < min(number, len(sortedData)):
             last_sum += sortedData.iloc[i, 1]
             std_vals.append(sortedData.iloc[i, 1])
-
-        delV = last_sum / len(std_vals)
-        cutoff_index = len(std_vals) - 1
+            i += 1
+        delV = last_sum / len(std_vals) if len(std_vals) > 0 else 0.0
+        cutoff_index = max(len(std_vals) - 1, 0)
 
     return delV, np.std(std_vals), cutoff_index, i
 
 
 # Plot vAtoms for a defect
-def plot_vatoms(defect_name, c1, c2, c3, c4, sortedData,
-                delV, cutoff_i, config, saveFolder, i):
-
+def plot_vatoms(defect_name, c1, c2, c3, c4, sortedData, delV, cutoff_i, config, saveFolder, i):
     title = "vAtoms_for_" + defect_name
-
     plt.figure(figsize=(10, 6))
     plt.title(title)
     plt.xlabel("Radial Distance (bohr)")
@@ -92,10 +85,10 @@ def plot_vatoms(defect_name, c1, c2, c3, c4, sortedData,
     plt.ylim(ymin, ymax)
 
     # Show delta V cutoff used for correction
-    plt.plot([sortedData.iloc[i, 0], xmax], [delV, delV], color='black', linestyle="dashed")
-    plt.plot([sortedData.iloc[i, 0], sortedData.iloc[i, 0]], [ymin, delV], color='black', linestyle="dashed")
+    plt.plot([sortedData.iloc[cutoff_i, 0], xmax], [delV, delV], color="black", linestyle="dashed")
+    plt.plot([sortedData.iloc[cutoff_i, 0], sortedData.iloc[cutoff_i, 0]], [ymin, delV], color="black", linestyle="dashed")
 
-    plt.legend(loc='upper right')
+    plt.legend(loc="upper right")
 
     saveLocation = os.path.join(saveFolder, title + ".png")
     plt.tight_layout()
@@ -104,18 +97,20 @@ def plot_vatoms(defect_name, c1, c2, c3, c4, sortedData,
 
 
 def main():
+
     # Argument parsing
     parser = argparse.ArgumentParser(description="Arguments for charged defect correction", formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument("-plotvatoms", nargs='?', type=str2bool, default=True)
-    parser.add_argument("-poscar", nargs='?', default="./POSCAR", help=" Path to the POSCAR file (default: ./POSCAR)")
-    parser.add_argument("-vatoms", nargs='?', default="./vAtoms_output.csv", help="Path to vAtoms_output.csv (default: ./vAtoms_output.csv)")
-    parser.add_argument("-correction", nargs='?', default="./energies_correction.csv", help="Path to energies_correction.csv (default: ./energies_correction.csv)")
-    parser.add_argument("-vatomsymax", nargs='?', type=float, default=-100, help="Maximum y-axis for vAtoms plots")
-    parser.add_argument("-vatomsxmax", nargs='?', type=float, default=-100, help="Maximum x-axis for vAtoms plots")
-    parser.add_argument("-vatomsymin", nargs='?', type=float, default=-100, help="Minimum y-axis for vAtoms plots")
-    parser.add_argument("-vatomsxmin", nargs='?', type=float, default=-100, help="Minimum x-axis for vAtoms plots")
-    parser.add_argument("-percent", nargs='?', type=float, default=0.8, help="Fraction of the furthest atoms used to compute delta V (default: 0.8)")
-    parser.add_argument("-number", nargs='?', type=int, default=-1, help="Number of furthest atoms used for delta V (default: -1)")
+    parser.add_argument("-plotvatoms", nargs="?", type=str2bool, default=True)
+    parser.add_argument("-poscar", nargs="?", default="./POSCAR", help="Path to the POSCAR file (default: ./POSCAR)")
+    parser.add_argument("-defectposcar", required=True, help="Path to a defect POSCAR used to determine defect elements")
+    parser.add_argument("-vatoms", nargs="?", default="./vAtoms_output.csv", help="Path to vAtoms_output.csv (default: ./vAtoms_output.csv)")
+    parser.add_argument("-correction", nargs="?", default="./energies_correction.csv", help="Path to energies_correction.csv (default: ./energies_correction.csv)")
+    parser.add_argument("-vatomsymax", nargs="?", type=float, default=-100, help="Maximum y-axis for vAtoms plots")
+    parser.add_argument("-vatomsxmax", nargs="?", type=float, default=-100, help="Maximum x-axis for vAtoms plots")
+    parser.add_argument("-vatomsymin", nargs="?", type=float, default=-100, help="Minimum y-axis for vAtoms plots")
+    parser.add_argument("-vatomsxmin", nargs="?", type=float, default=-100, help="Minimum x-axis for vAtoms plots")
+    parser.add_argument("-percent", nargs="?", type=float, default=0.8, help="Fraction of the furthest atoms used to compute delta V (default: 0.8)")
+    parser.add_argument("-number", nargs="?", type=int, default=-1, help="Number of furthest atoms used for delta V (default: -1)")
     parser.add_argument("-mu", nargs="+", type=float, required=True, help="Per-atom bulk energies for each element in POSCAR order")
     config = vars(parser.parse_args())
 
@@ -127,17 +122,22 @@ def main():
     data = pd.read_csv(config["vatoms"]).astype(str)
     finalFile = pd.read_csv(config["correction"])
 
-    # Read POSCAR
-    element_names, defectSites = read_poscar(config["poscar"])
+    # Read bulk POSCAR
+    bulk_element_names, bulk_sites = read_poscar(config["poscar"])
+
+    # Read defect POSCAR
+    defect_element_names, defect_sites = read_poscar(config["defectposcar"])
+
+    # Chemical potentials
     mu = config["mu"]
 
-    # Ensure chemical potentials match POSCAR elements
-    if len(mu) != len(element_names):
-        raise ValueError("Mismatch between mu values and POSCAR elements")
+    # Ensure chemical potentials match defect POSCAR elements
+    if len(mu) != len(defect_element_names):
+        raise ValueError(f"Mismatch between mu values ({len(mu)}) and defect POSCAR elements ({len(defect_element_names)}): {defect_element_names}")
 
     print("\nChemical potentials:")
-    for el, val in zip(element_names, mu):
-        print(f"  μ_{el} = {val} eV")
+    for el, val in zip(defect_element_names, mu):
+        print(f" μ_{el} = {val} eV")
     print()
 
     # Initialize storage for delta V extraction
@@ -147,18 +147,24 @@ def main():
     allDev = [0]
     defectNames = ["bulk"]
     charges = [0]
-
     column_buffers = ([], [], [], [])
     start = 0
 
     # Loop over vAtoms blocks
     while start <= len(data) - 2:
-
         c1, c2, c3, c4 = column_buffers
         j = start + 1
 
+        # Parse defect name and charge from the final "_"
         defect_name = data.iloc[start, 1].replace("/", "")
-        base_name = "_".join(defect_name.split("_")[:2])
+        base_name = defect_name.rsplit("_", 1)[0]
+        charge_str = defect_name.rsplit("_", 1)[1]
+
+        try:
+            charge = int(charge_str)
+        except ValueError:
+            raise ValueError(f"Invalid charge in defect name '{defect_name}'. Expected an integer after the final '_'.")
+
         vatoms_defects.append(base_name)
 
         # Read one full vAtoms block
@@ -171,41 +177,18 @@ def main():
             j += 1
 
         # Sort by distance for far field averaging
-        sortedData = pd.DataFrame(
-            {"distance": c1, "values": c4},
-            dtype=float
-        ).sort_values("distance", ascending=False)
+        sortedData = pd.DataFrame({"distance": c1, "values": c4}, dtype=float).sort_values("distance", ascending=False)
 
         # Compute delta V from far field region
-        delV, std, cutoff_i, i = compute_delta_v(
-            sortedData, config["percent"], config["number"]
-        )
+        delV, std, cutoff_i, i = compute_delta_v(sortedData, config["percent"], config["number"])
 
-        # Extract charge state from defect name
-        charge_str = defect_name.split("_")[-1]
-        try:
-            charge = float(charge_str)
-            charge_ok = True
-        except ValueError:
-            charge = None
-            charge_ok = False
-
-        print_records.append({
-            "defect": defect_name,
-            "delta_v": delV,
-            "std": std,
-            "charge": charge,
-            "charge_ok": charge_ok
-        })
-
+        print_records.append({"defect": defect_name, "delta_v": delV, "std": std, "charge": charge})
         excelFile.append(delV)
         allDev.append(std)
 
         # Optional vAtoms visualization
         if config["plotvatoms"]:
-            plot_vatoms(defect_name, c1, c2, c3, c4,
-                        sortedData, delV, cutoff_i,
-                        config, "vAtomsImages", i)
+            plot_vatoms(defect_name, c1, c2, c3, c4, sortedData, delV, cutoff_i, config, "vAtomsImages", i)
 
         # Reset buffers for next defect
         column_buffers = ([], [], [], [])
@@ -214,13 +197,20 @@ def main():
     # Build final corrected dataset
     for i in range(1, len(finalFile)):
         name = finalFile.iloc[i, 0].replace("/", "")
-        defectNames.append("_".join(name.split("_")[:2]))
 
-        charge_str = name.split("_")[-1]
+        # Everything before the FINAL "_" is the defect name
+        defect_name = name.rsplit("_", 1)[0]
+
+        # Everything after the FINAL "_" is the charge
+        charge_str = name.rsplit("_", 1)[1]
+
         try:
-            charges.append(float(charge_str))
+            charge = int(charge_str)
         except ValueError:
-            raise ValueError(f"Invalid defect name: {name}")
+            raise ValueError(f"Invalid defect name: {name}. Expected an integer charge after the final '_'.")
+
+        defectNames.append(defect_name)
+        charges.append(charge)
 
     # Insert delta V corrections into final output table
     finalFile = finalFile.drop(finalFile.columns[0], axis=1)
@@ -240,18 +230,15 @@ def main():
         delV = rec["delta_v"]
         std = rec["std"]
         charge = rec["charge"]
-        charge_ok = rec["charge_ok"]
-
-        qstd = round(charge * std, 5) if charge_ok else "N/A"
+        qstd = round(charge * std, 5)
 
         print(f"{defect:<12} delta V={round(delV,5):>6}, std={round(std,5):>6}, q*std={qstd}")
 
-        if not charge_ok:
-            print(f"Warning: Unparsed charge in '{defect}'")
-        elif abs(charge * std) >= 0.1:
+        if abs(charge * std) >= 0.1:
             print(f"Warning: |q*std| greater than or equal to 0.1 for {defect}")
 
     print("\nComplete")
+
 
 if __name__ == "__main__":
     main()
