@@ -191,9 +191,13 @@ stop
 ## Energies Final and $\Delta V$ Plots
 
 Once `energies_correction.csv` and `vAtoms_output.csv` are ready, use `energies_final_vAtoms_plots.py` to compute the potential alignment corrections (ΔV) for each defect and use them to create the energies final file. This script also calculates and adds the standard deviation of ΔV, based on the chosen set of atoms, to the energies final file. Finally, it will plot $\Delta V$ vs radial distance for each defect. 
+
+    parser.add_argument("-poscar", nargs="?", default="./POSCAR", help="Path to defect POSCAR")
+    parser.add_argument("-bulkposcar", nargs="?", default="../bulk/POSCAR", help="Path to perfect/bulk POSCAR")
   
 ### Program Arguments  
-- `-poscar`: Path to the POSCAR file (default: `./POSCAR`)  
+- `-poscar`: Path to the defect POSCAR file (default: `./POSCAR`)
+- `-bulkposcar`: Path to the perfect/bulk POSCAR file (default: `../bulk/POSCAR`)
 - `-vatoms`: Path to `vAtoms_output.csv` (default: `./vAtoms_output.csv`)  
 - `-correction`: Path to `energies_correction.csv` (default: `./energies_correction.csv`)  
 - `-percent`: Fraction of the furthest atoms used to compute ΔV (default: 0.8)  
@@ -211,7 +215,7 @@ Once `energies_correction.csv` and `vAtoms_output.csv` are ready, use `energies_
 We recommend that users create a small bash script to run the program. We will call it `run_energies_final_vAtoms_plots.sh`. This makes updating and keeping track of arguments easier. Here is an example:
 ```
 #run energies_final_vAtoms_plots.py	 Energy_per_atom Ga,N
-python energies_final_vAtoms_plots.py -mu -2.91250895 -8.31707533 -percent 0.85 -poscar ./POSCAR -vatoms ./vAtoms_output.csv -correction ./energies_correction.csv
+python energies_final_vAtoms_plots.py -mu -2.91250895 -8.31707533 -percent 0.85 -poscar Va_Ga_0/POSCAR -vatoms ./vAtoms_output.csv -correction ./energies_correction.csv
 ```
 ### Example Output
 
@@ -280,8 +284,8 @@ A:
 We recommend that users create a small bash script to run the program. We will call it `run_formation_vs_fermi.sh`. This makes updating and keeping track of arguments easier. Here is an example:
 ```
 #run formation_vs_fermi.py    Energy_per_atom Ga,N                                          						                    HSE_BG  HSE_VBM
-python formation_vs_fermi.py -mu -2.91250895 -8.31707533 -bg 1.7378 -vbm 3.4099 -chempot target_vertices_Ga_Rich.yaml -ymin 0 -ymax 8 -hse 3.3212 2.3829 --save_as GaRich
-python formation_vs_fermi.py -mu -2.91250895 -8.31707533 -bg 1.7378 -vbm 3.4099 -chempot target_vertices_N_Rich.yaml -ymin 0 -ymax 8 -hse 3.3212 2.3829 --save_as NRich
+python formation_vs_fermi.py -mu -2.91250895 -8.31707533 -bg 1.7378 -vbm 3.4099 -poscar Va_Ga_0/POSCAR -chempot target_vertices_Ga_Rich.yaml -ymin 0 -ymax 8 -hse 3.3212 2.3829 --save_as GaRich
+python formation_vs_fermi.py -mu -2.91250895 -8.31707533 -bg 1.7378 -vbm 3.4099 -poscar Va_Ga_0/POSCAR -chempot target_vertices_N_Rich.yaml -ymin 0 -ymax 8 -hse 3.3212 2.3829 --save_as NRich
 ```
 ## Output
 
