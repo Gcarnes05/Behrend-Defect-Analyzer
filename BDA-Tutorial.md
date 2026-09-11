@@ -218,12 +218,12 @@ python energies_final_vAtoms_plots.py -mu -2.91250895 -8.31707533 -percent 0.85 
 `energies_final_vAtoms_plots.py` produces `energies_final.csv` with the following format:
 ```
 Defect Name, Charge, Bulk Energy, Correction Energy, Delta V, Std Deviation 
-bulk,0.0,-779.26382452,0.0,0.0,0.0  
-Va_Ga,0.0,-769.12439871,0.0,-0.1134629125,0.008629802275897968  
-Va_Ga,-1.0,-766.05547513,0.1844,-0.10367685625,0.014714400975998342  
-Va_Ga,1.0,-771.5878355,0.1844,-0.182173,0.012320662477115425  
-Va_Ga,-2.0,-762.69860429,0.737601,-0.09537269999999999,0.02371790751483992  
-Va_Ga,-3.0,-759.18076603,1.6596,-0.08617888124999998,0.03630872044557992
+bulk,0,-779.26382452,0.0,0.0,0.0  
+Va_Ga,0,-769.12439871,0.0,-0.1134629125,0.008629802275897968  
+Va_Ga,-1,-766.05547513,0.1844,-0.10367685625,0.014714400975998342  
+Va_Ga,1,-771.5878355,0.1844,-0.182173,0.012320662477115425  
+Va_Ga,-2,-762.69860429,0.737601,-0.09537269999999999,0.02371790751483992  
+Va_Ga,-3,-759.18076603,1.6596,-0.08617888124999998,0.03630872044557992
 ```
 **Manual Creation**
 This file can be created manually if these calculations have been done using another tool. If using PyDefect, the information can be found in the following files:
