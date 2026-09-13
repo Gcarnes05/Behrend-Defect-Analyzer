@@ -455,7 +455,7 @@ A,Va_Ga,-1,-2,2.00550
 ```
 The program will also store plots containing all defects in a directory named `chargeDefectPlots`. Here is an example of one such plot:
 
-<img src="images/GaRich_HSE_PBE.png" alt="Formation energy vs. Fermi energy for Ga-rich conditions" width="600">
+<img src="images/GaRich.png" alt="Formation energy vs. Fermi energy for Ga-rich conditions" width="600">
 
 If `-plotsingledefect True` is used, the program will also store individual defect plots in a `singleDefects` directory inside the `chargeDefectPlots` directory. Each individual plot is saved as a PNG file using the defect name. Examples of plots containing an individual defect and multiple defects are shown below:
 
