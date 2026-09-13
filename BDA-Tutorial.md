@@ -1,3 +1,4 @@
+
 # Tutorial of Behrend Defect Analyzer (BDA)
 
 This page explains how to use the `BDA` code.
@@ -33,26 +34,30 @@ The BDA assumes the following directory structure:
 - The placeholder `<project_name>` typically represents the name of the target material.
 
 ```
-    <project_name>
-     │
-     ├ bulk/ ──
-     │        ├─ POSCAR
-     │        ├─ OUTCAR
-     │        ├─ LOCPOT
-     │
-     └ defects/ ── 
-                ├─ energies_final_vAtoms_plots.py
-                ├─ formation_vs_fermi.py
-                ├─ make_vAtoms_output.sh
-                ├─ run_sxdefectalign.sh
-                ├─ target_vertices_X_Rich.yaml
-                ├─ target_vertices_Y_Rich.yaml
-                ├─ Va_X_0/
-                ├─ Va_X_1/
-                ├─ Va_X_2/
-                 ...
+	<project_name>/
+	│
+	├── bulk/
+	│   ├── POSCAR
+	│   ├── OUTCAR
+	│   └── LOCPOT
+	│
+	└── defects/
+	    ├── energies_final_vAtoms_plots.py
+	    ├── formation_vs_fermi.py
+	    ├── make_vAtoms_output.sh
+	    ├── run_sxdefectalign.sh
+	    ├── target_vertices_X_Rich.yaml
+	    ├── target_vertices_Y_Rich.yaml
+	    │ 
+	    ├── <defect>_0/
+	    │   └── POSCAR
+	    ├── <defect>_1/
+	    │   └── ...
+	    ├── <defect>_-1/
+	    │   └── ...
+	    └── ...
 ```
-We recommend that users follow the same directory structure if possible. The defect directories must also follow the naming convention shown. 
+We recommend that users follow the same directory structure. The defect directories must also follow the naming convention `<defect>_charge`!
 
 The BDA also assumes the following formatting for POSCAR files. The header must include the defect center (i.e. three values representing the x,y,z coordinates of the defect in lattice units). The rest of the POSCAR should have the standard format, see for example: [Materials Project](https://next-gen.materialsproject.org/materials) [7] and below:
 
@@ -190,29 +195,28 @@ stop
 - Column 5: Weighting term, internal value from `sxdefectalign` (e.g., weighting or screening-related information).
 ## Energies Final and $\Delta V$ Plots
 
-Once `energies_correction.csv` and `vAtoms_output.csv` are ready, use `energies_final_vAtoms_plots.py` to compute the potential alignment corrections (ΔV) for each defect and use them to create the energies final file. This script also calculates and adds the standard deviation of ΔV, based on the chosen set of atoms, to the energies final file. Finally, it will plot $\Delta V$ vs radial distance for each defect. 
-  
+Once `energies_correction.csv` and `vAtoms_output.csv` are ready, use `energies_final_vAtoms_plots.py` to compute the potential alignment corrections ($\Delta V$) for each defect, create the `energies_final.csv` file, and create a `YAML` file containing relevant information on each neutral defect inside the `defects` directory. The `YAML` file is created by recursively parsing the defect directory for all `<defect>_0/POSCAR` files and storing information about each neutral defect, including its POSCAR path, elements, and atom counts. The script then determines all unique elements present across these neutral defect POSCARs. The chemical potentials must be provided for every unique element detected across the neutral defect POSCARs. Each chemical potential must be specified using the `Element=Energy` format. The order of the entries does not matter. For example, if the detected elements are `Ga` and `N`, both `-mu Ga=-2.91250895 N=-8.31707533` and `-mu N=-8.31707533 Ga=-2.91250895` are valid.
 ### Program Arguments  
-- `-poscar`: Path to the defect POSCAR file (default: `./POSCAR`)
-- `-bulkposcar`: Path to the perfect/bulk POSCAR file (default: `../bulk/POSCAR`)
+- `-defectdirectory`: Directory containing neutral defects (default: `.`)
+- `-defectyaml`: Output YAML for defect POSCAR info (default: `defect_poscars.yaml`)
 - `-vatoms`: Path to `vAtoms_output.csv` (default: `./vAtoms_output.csv`)  
 - `-correction`: Path to `energies_correction.csv` (default: `./energies_correction.csv`)  
 - `-percent`: Fraction of the furthest atoms used to compute ΔV (default: 0.8)  
 - `-number`: Number of furthest atoms used for ΔV (default: -1)
-- `-mu`: Per-atom bulk energies for each element in POSCAR order
-- `-plotvatoms`: Boolean flag to generate vAtoms plots for all defects (default: `True`).  
-- `-vatomsxmin`: Minimum x-axis for vAtoms plots (default: -100, auto-scaled).  
-- `-vatomsxmax`: Maximum x-axis for vAtoms plots (default: -100, auto-scaled).  
-- `-vatomsymin`: Minimum y-axis for vAtoms plots (default: -100, auto-scaled).  
-- `-vatomsymax`: Maximum y-axis for vAtoms plots (default: -100, auto-scaled).
-  
+- `-mu`: One or more named chemical potentials in the form `Element=Energy`
+- `-plotvatoms`: Boolean flag to generate vAtoms plots for all defects (default: `True`)
+- `-vatomsxmin`: Minimum x-axis for vAtoms plots (default: -100, auto-scaled)
+- `-vatomsxmax`: Maximum x-axis for vAtoms plots (default: -100, auto-scaled)
+- `-vatomsymin`: Minimum y-axis for vAtoms plots (default: -100, auto-scaled)
+- `-vatomsymax`: Maximum y-axis for vAtoms plots (default: -100, auto-scaled)
+ 
 **Note:** You can use either `-percent` or `-number` to select atoms for $\Delta V$ calculation. If both are provided, `-number` takes precedence.  
   
 ### Example Usage  
 We recommend that users create a small bash script to run the program. We will call it `run_energies_final_vAtoms_plots.sh`. This makes updating and keeping track of arguments easier. Here is an example:
 ```
-#run energies_final_vAtoms_plots.py	 Energy_per_atom Ga,N
-python energies_final_vAtoms_plots.py -mu -2.91250895 -8.31707533 -percent 0.85 -poscar Va_Ga_0/POSCAR -vatoms ./vAtoms_output.csv -correction ./energies_correction.csv
+#run energies_final_vAtoms_plots.py
+python energies_final_vAtoms_plots.py -mu Ga=-2.91250895 N=-8.31707533 -percent 0.85
 ```
 ### Example Output
 
@@ -226,8 +230,8 @@ Va_Ga,1,-771.5878355,0.1844,-0.182173,0.012320662477115425
 Va_Ga,-2,-762.69860429,0.737601,-0.09537269999999999,0.02371790751483992  
 Va_Ga,-3,-759.18076603,1.6596,-0.08617888124999998,0.03630872044557992
 ```
-**Manual Creation**
-This file can be created manually if these calculations have been done using another tool. If using PyDefect, the information can be found in the following files:
+**Manual Creation of `energies_final.csv`**
+This file can be created manually if these calculations have been done using another tool. If this is done, ensure that the order of the defects matches the order in `vAtoms.csv`. If using PyDefect, the information can be found in the following files:
 - **Defect Name**: Name of the defect directory (e.g., `Va_Ga_0/`).  
 - **Charge**: Encoded in the defect directory name (e.g., `Va_Ga_-1/` → `-1`).  
 - **Bulk Energy**: Extract from `OUTCAR` of each calculation.  
@@ -235,54 +239,97 @@ This file can be created manually if these calculations have been done using ano
 - **Potential Alignment (ΔV)**: Also from `defect_energy_info.yaml` (reported as alignment energy). Compute ΔV using:  $\Delta V =  \frac{E_\text{align}}{q}$ where $q$ is the defect charge.  
 - **Standard Deviation of ΔV**: Not provided in PyDefect; can set to `0` if unknown.
 
+`energies_final_vAtoms_plots.py` produces `defect_poscars.yaml` with the following format:
+```
+defects:
+  Va_Ga:
+    poscar: Va_Ga_0/POSCAR
+    elements:
+    - Ga
+    - N
+    counts:
+    - 63
+    - 64
+  Va_N:
+    poscar: Va_N_0/POSCAR
+    elements:
+    - Ga
+    - N
+    counts:
+    - 64
+    - 63
+```
 The program saves all ΔV plots in the `vAtomsImages` folder. These plots should be manually inspected to confirm their physical validity. An example is shown below:
 
 <img src="images/vAtoms_for_Va_Ga_-3.png" alt="ΔV vs Radius for Va_Ga -3" width="600">
 
 # Step 2. Plotting
-Plotting the formation energy vs the fermi energy is a good way to qualitatively interpret which defects are most likely to be present when the material has a particular fermi energy. The `formation_vs_fermi.py` program will create these plots using files previously created in the tutorial. 
-## Relative Chemical Potential Input ($\Delta \mu$)
-The chemical potentials used in the formation energy calculations are provided through a `.yaml` file, which defines the environment (e.g., Ga-rich or N-rich). Each file must contain only a single chemical potential condition. When comparing different growth limits, separate YAML files must therefore be created for each condition.
+Plotting the formation energy vs the fermi energy is a good way to qualitatively interpret which defects are most likely to be present when the material has a particular fermi energy. The `formation_vs_fermi.py` program will create these plots using files previously created in the tutorial. The program requires chemical potential input along with the `defect_poscars.yaml` file.
+## Input Files
 
-We recommend using the naming convention `target_vertices_<Element>_Rich.yaml`, where `<Element>` indicates the species in excess under the chosen growth condition. For example, `target_vertices_Ga_Rich.yaml` corresponds to Ga-rich conditions, while `target_vertices_N_Rich.yaml` corresponds to N-rich conditions. The default file name used by the code is `target_vertices.yaml`, which is intended only for single-condition workflows and is not recommended for systematic comparisons across multiple environments.
+### Defect composition input
 
-Each YAML file should contain a single chemical potential block in the following format:
+The program reads neutral defect compositions from `defect_poscars.yaml` by default. Each defect entry must provide `elements` and `counts` lists of equal length:
+```
+defects:
+  Va_Ga:
+    elements: [Ga, N]
+    counts: [63, 64]
+  Va_N:
+    elements: [Ga, N]
+    counts: [64, 63]
+```
+The element names and atom counts are compared with the bulk POSCAR to determine the composition change for each defect. The composition change is then used to calculate the chemical-potential contribution to the formation energy.
+### Relative chemical potential input ($\Delta \mu$)
+Relative chemical potentials are supplied through a YAML file. Each entry containing a `chem_pot` dictionary is treated as a chemical-potential phase or growth condition. For a single condition, use a file such as:
+
 ```
 target: GaN
 A:
-    chem_pot:
-        Ga: 0.0
-        N: -1.31365
+  chem_pot:
+    Ga: 0.0
+    N: -1.31365
 ```
-**Note:** The bulk reservoir energies per atom ($\mu$) are input by the user and must be input in the same order as the YAML file.
+
+Multiple phase blocks may be included in one YAML file, provided that every block contains the same elements. The blocks are processed in file order. For systematic comparisons, separate files are still recommended, using names such as:
+-   `target_vertices_Ga_Rich.yaml`
+    
+-   `target_vertices_N_Rich.yaml`
+
+The `target` entry is retained as metadata; the program identifies chemical-potential conditions from the top-level blocks containing `chem_pot`.
+### Bulk reservoir energies
+The `-mu` values are the elemental bulk reservoir energies per atom. They must be supplied using the same element names as the `defect_poscars.yaml` file, in `Element=Energy` format. For example:
+```
+-mu Ga=-2.91250895 N=-8.31707533
+```
+
+The program validates that every element in the defect compositions has exactly one corresponding `-mu` value and rejects missing or extra elements, capitalization matters.
 ### Program Arguments  
 -   `-plotsingledefect`: Generate individual plots for each defect (default: `False`)
-- `-poscar`: Path to the defect POSCAR file (default: `./POSCAR`)  
+-   `-defectyaml`: YAML containing defect compositions (default: `./defect_poscars.yaml`)
 -  `-bulkposcar`: Path to the bulk POSCAR file (default: `../bulk/POSCAR`)  
 -   `-correction`: Path to the final correction energies file (default: `./energies_final.csv`)
 -   `-chempot`: Path to the chemical potential YAML file (default: `./target_vertices.yaml`)
 -   `-ymax`: Maximum y-axis value for defect formation energy plot (default: `7`)
--   `-xmax`: Maximum x-axis value for defect plot (default: `-3`; which sets to bandgap)
+-   `-xmax`: Maximum x-axis value for defect plot (default: `-3`; replaced by the band gap)
 -   `-ymin`: Minimum y-axis value for defect formation energy plot (default: `-7`)
 -   `-xmin`: Minimum x-axis value for defect plot (default: `0`)
 -   `-testfe`: Show defect charge-state information at a specified Fermi level (default: `-1`)
 -   `-kT`: Thermal energy in eV used for occupation broadening (default: `0.05`)
 -   `-printQ`: Print charge-state values at the intrinsic Fermi level (default: `False`)
--   `-colors`: List of colors for plotting (default: `["red", "green", "blue", "orange"]`)
+-   `-colors`: List of colors for plotting (default: `["red", "blue", "orange", ...]`)
 -   `-legloc`: Legend location identifier for plots (default: `8`)
 -   `-hse`: `[band gap, VBM]` correction values for HSE calculations (default: `None`)
 -   `--save_as`: Output filename prefix for generated plots (default: `combinedDefects`)
 -   `-bg`: Band gap energy in eV (required)
 -   `-vbm`: Valence band maximum offset in eV (required)
--   `-mu`: Bulk reservoir energies per atom in `target_vertices.yaml` order (required)
-
-
+- `-mu`: One or more named chemical potentials in the form `Element=Energy`
 ## Example Usage  
 We recommend that users create a small bash script to run the program. We will call it `run_formation_vs_fermi.sh`. This makes updating and keeping track of arguments easier. Here is an example:
 ```
 #run formation_vs_fermi.py    Energy_per_atom Ga,N                                          						                    HSE_BG  HSE_VBM
-python formation_vs_fermi.py -mu -2.91250895 -8.31707533 -bg 1.7378 -vbm 3.4099 -poscar Va_Ga_0/POSCAR -chempot target_vertices_Ga_Rich.yaml -ymin 0 -ymax 8 -hse 3.3212 2.3829 --save_as GaRich
-python formation_vs_fermi.py -mu -2.91250895 -8.31707533 -bg 1.7378 -vbm 3.4099 -poscar Va_Ga_0/POSCAR -chempot target_vertices_N_Rich.yaml -ymin 0 -ymax 8 -hse 3.3212 2.3829 --save_as NRich
+python formation_vs_fermi.py -mu Ga=-2.91250895 N=-8.31707533 -bg 1.7378 -vbm 3.4099 -chempot target_vertices_Ga_Rich.yaml -ymin 0 -ymax 8 -hse 3.3212 2.3829 --save_as GaRich
+python formation_vs_fermi.py -mu Ga=-2.91250895 N=-8.31707533 -bg 1.7378 -vbm 3.4099 -chempot target_vertices_N_Rich.yaml -ymin 0 -ymax 8 -hse 3.3212 2.3829 --save_as NRich
 ```
 ## Output
 
@@ -302,50 +349,116 @@ An example output is shown below:
 
 ````
 Chemical potential values: 2
-Number of unique elements: 2 
-Elements: Si, N
+energies_final.csv validation passed
 
-Bulk POSCAR composition: 
-Si 216
+Defects found in defect_poscars.yaml:
+    Va_Ga
+    Va_N
 
-Defect POSCAR composition: 
-Si 214 
-N 1
+Phase: A
+Defect: Va_Ga
+
+Bulk POSCAR composition:
+    Ga    64
+    N     64
+
+Defect POSCAR composition:
+    Ga    63
+    N     64
 
 POSCAR Composition change:
- N +1 
- Si -2
- 
- energies_final.csv validation passed
- Defect found in energies_final.csv: 
- Va_Si
- 
- Effective chemical potentials: 
- N -16.596500 eV 
- Si -5.399894 eV
- 
- Chemical potential terms: 
- N: Delta_N = +1, mu = -16.596500, contribution = 16.596500 eV 
- Si: Delta_N = -2, mu = -5.399894, contribution = -10.799788 eV
- 
- Defect Formation Energies at VBM (5.3713) in eV:
- Va_Si_0 8.868618 eV
- Va_Si_-1 9.590654 eV
- Va_Si_1 8.363258 eV
- Va_Si_-2 10.686338 eV
- Va_Si_2 8.229655 eV
- Transition from 2 to 1 at 0.13370 eV
- Transition from 1 to 0 at 0.50540 eV
- Transition from 0 to -1 at 0.72210 eV
- Transition from -1 to -2 at 1.09570 eV
+    Ga    -1
+    N     0
 
-Intrinsic Fermi Defect Level: 0.5054 eV
+Effective chemical potentials:
+    Ga    -2.912509 eV
+
+Chemical potential terms:
+    Ga: Delta_N = -1, mu = -2.912509, contribution = -2.912509 eV
+
+Defect Formation Energies at VBM (1.999) in eV [phase: A]:
+Va_Ga_0       7.670515 eV
+Va_Ga_-1      9.069251 eV
+Va_Ga_1       6.724370 eV
+Va_Ga_-2     11.074738 eV
+Va_Ga_-3     13.797562 eV
+
+Transition from  1 to  0 at 0.94620 eV
+Transition from  0 to -1 at 1.39880 eV
+Transition from -1 to -2 at 2.00550 eV
+Transition from -2 to -3 at 2.72290 eV
+
+================================================================================
+
+Phase: A
+Defect: Va_N
+
+Bulk POSCAR composition:
+    Ga    64
+    N     64
+
+Defect POSCAR composition:
+    Ga    64
+    N     63
+
+POSCAR Composition change:
+    Ga    0
+    N     -1
+
+Effective chemical potentials:
+    N     -9.630725 eV
+
+Chemical potential terms:
+    N: Delta_N = -1, mu = -9.630725, contribution = -9.630725 eV
+
+Defect Formation Energies at VBM (1.999) in eV [phase: A]:
+Va_N_0       1.573080 eV
+Va_N_-1      4.582807 eV
+Va_N_1      -1.173210 eV
+Va_N_2      -1.654255 eV
+Va_N_3      -1.907182 eV
+
+Transition from  3 to  2 at 0.25300 eV
+Transition from  2 to  1 at 0.48110 eV
+Transition from  1 to  0 at 2.74630 eV
+Transition from  0 to -1 at 3.00980 eV
+
+Intrinsic Fermi Defect Level: 2.7463 eV
+
+Formation energies saved to formation_energies.csv
+Transition levels saved to transition_levels.csv
 ````
-The program will also store the plots with all defects pictured in a directory named `chargeDefectPlots`. Here is an example of one such plot:
+
+Two CSV files are created containing the calculated formation energies and transition levels.
+
+
+`formation_energies.csv` contains the formation energy of every defect charge state at the selected VBM. Each row corresponds to one defect, charge state, and chemical potential phase.
+
+For example:
+
+```
+Phase,Defect,Charge,Formation_Energy_eV
+A,Va_Ga,0,7.670515
+A,Va_Ga,-1,9.069251
+A,Va_Ga,1,6.724370
+...
+```
+ `transition_levels.csv` contains the Fermi energy at which the lowest-energy charge state changes from one charge state to another. Each row corresponds to one charge-state transition for a particular defect and chemical potential phase.
+
+For example:
+```
+Phase,Defect,Charge_1,Charge_2,Transition_Fermi_Energy_eV
+A,Va_Ga,1,0,0.94620
+A,Va_Ga,0,-1,1.39880
+A,Va_Ga,-1,-2,2.00550
+...
+```
+The program will also store plots containing all defects in a directory named `chargeDefectPlots`. Here is an example of one such plot:
 <img src="images/..." alt="" width="600">
 
-Lastly, the program will store the plots with a singular defect in a directory named `singleDefects` inside the `chargeDefectPlots` directory. Optionally, the defects can be plotted individually. They will appear in this directory as a png file with the defect name. Here are examples of plots containing an individual defect and multiple defects:
+If `-plotsingledefect True` is used, the program will also store individual defect plots in a `singleDefects` directory inside the `chargeDefectPlots` directory. Each individual plot is saved as a PNG file using the defect name. Examples of plots containing an individual defect and multiple defects are shown below:
 <img src="images/..." alt="" width="600">
+
 # References
 [1] Yu Kumagai, Naoki Tsunoda, Akira Takahashi, and Fumiyasu Oba. Insights into oxygen vacancies from high-throughput first-principles calculations. *Phys. Rev. Materials*, 5:123803, 2021.  
 [2] Zachery Willard. GitHub profile. https://github.com/zacherywillard, Accessed March 2026.  
